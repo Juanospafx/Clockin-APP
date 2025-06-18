@@ -1,0 +1,14 @@
+train: ../app/data/train/images
+val: ../app/data/valid/images
+test: ../app/data/test/images
+
+nc: 4
+names: ['helmet', 'not_helmet', 'not_reflective', 'reflective']
+
+
+roboflow:
+  workspace: mathfdxe
+  project: safety-vest---v4-mdeh3
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/mathfdxe/safety-vest---v4-mdeh3/dataset/1
