@@ -250,10 +250,6 @@ async def create_office_clockin(
     db: Session            = Depends(get_db),
     current_user: User     = Depends(get_current_user),
 ):
-    # sólo office o admin
-    if current_user.role == RoleEnum.field:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Los usuarios field deben usar detección")
-
     ext = os.path.splitext(file.filename)[1]
     fname = f"{uuid4()}{ext}"
     path = os.path.join(UPLOAD_DIR, fname)
@@ -270,7 +266,6 @@ async def create_office_clockin(
         photo_path=f"/uploads/clockins/{fname}"
     )
 
-    # resto igual…
     db.add(ClockinHistory(
         clockin_id=clk.id,
         user_id=current_user.id,
@@ -336,7 +331,7 @@ def delete_clockin(
     if current_user.role != RoleEnum.admin and clk.user_id != current_user.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "No autorizado")
 
-    # resto igual…
+    # Borrar foto en disco
     if clk.photo_path:
         fp = clk.photo_path.lstrip("/")
         try:
@@ -344,8 +339,9 @@ def delete_clockin(
         except FileNotFoundError:
             pass
 
-    db.query(ClockinHistory).filter(ClockinHistory.clockin_id == clockin_id).delete()
-    db.query(ProjectHistory).filter(ProjectHistory.clockin_id == clockin_id).delete()
+    # Borrar historiales asociados
+    db.query(ClockinHistory).filter(ClockinHistory.clockin_id == clockin_id).delete(synchronize_session=False)
+    db.query(ProjectHistory).filter(ProjectHistory.clockin_id == clockin_id).delete(synchronize_session=False)
 
     db.delete(clk)
     db.commit()

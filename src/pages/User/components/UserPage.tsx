@@ -1,4 +1,5 @@
 // src/pages/User/UserPage.tsx
+
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import axios from "axios";
 import UserHeader from "./UserHeader";
@@ -17,9 +18,15 @@ const API_BASE = "http://localhost:8000";
 
 const UserPage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [showProfileForm, setShowProfileForm] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [form, setForm] = useState({ username: "", email: "" });
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [passwordForm, setPasswordForm] = useState({
+    old_password: "",
+    new_password: "",
+    confirm_password: ""
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const token = localStorage.getItem("token");
@@ -35,7 +42,7 @@ const UserPage: React.FC = () => {
       .catch(console.error);
   }, [token]);
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleProfileSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!token) return alert("No token");
 
@@ -45,14 +52,49 @@ const UserPage: React.FC = () => {
     if (profilePhoto) data.append("profile_photo", profilePhoto);
 
     try {
-      const res = await axios.put<User>(`${API_BASE}/users/me`, data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.put<User>(
+        `${API_BASE}/users/me`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          }
+        }
+      );
       setUser(res.data);
-      setShowForm(false);
+      setShowProfileForm(false);
       setProfilePhoto(null);
     } catch {
       alert("Failed to update profile");
+    }
+  };
+
+  const handlePasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      return alert("New passwords do not match");
+    }
+    try {
+      await axios.put(
+        `${API_BASE}/users/me/password`,
+        {
+          old_password: passwordForm.old_password,
+          new_password: passwordForm.new_password
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+      alert("Password changed successfully");
+      setShowPasswordForm(false);
+      setPasswordForm({ old_password: "", new_password: "", confirm_password: "" });
+    } catch (err) {
+      console.error("Error changing password:", err);
+      alert("Error changing password");
     }
   };
 
@@ -61,7 +103,10 @@ const UserPage: React.FC = () => {
       <UserSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col">
-        <UserHeader onAddUser={() => setShowForm(true)} onToggleSidebar={() => setSidebarOpen((o) => !o)} />
+        <UserHeader
+          onAddUser={() => setShowProfileForm(true)}
+          onToggleSidebar={() => setSidebarOpen((o) => !o)}
+        />
 
         <main className="flex-1 flex justify-center items-center p-6">
           {user ? (
@@ -80,15 +125,25 @@ const UserPage: React.FC = () => {
               <p><strong>Username:</strong> {user.username}</p>
               <p><strong>Email:</strong> {user.email}</p>
               <p><strong>Role:</strong> {user.role}</p>
+              <button
+                onClick={() => setShowPasswordForm(true)}
+                className="mt-4 text-sm text-blue-600 hover:underline"
+              >
+                Change Password?
+              </button>
             </div>
           ) : (
             <p>Loading...</p>
           )}
         </main>
 
-        {showForm && (
+        {/* Edit Profile Modal */}
+        {showProfileForm && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-lg w-full max-w-sm space-y-4">
+            <form
+              onSubmit={handleProfileSubmit}
+              className="bg-white p-6 rounded shadow-lg w-full max-w-sm space-y-4"
+            >
               <h2 className="text-xl font-semibold">Edit Profile</h2>
               <label>
                 Username
@@ -121,8 +176,82 @@ const UserPage: React.FC = () => {
                 />
               </label>
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => { setShowForm(false); setProfilePhoto(null); }} className="px-4 py-2 border rounded">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-black text-white rounded">Save</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfileForm(false);
+                    setProfilePhoto(null);
+                  }}
+                  className="px-4 py-2 border rounded"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-2 bg-black text-white rounded">
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Change Password Modal */}
+        {showPasswordForm && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <form
+              onSubmit={handlePasswordSubmit}
+              className="bg-white p-6 rounded shadow-lg w-full max-w-sm space-y-4"
+            >
+              <h2 className="text-xl font-semibold">Change Password</h2>
+              <label>
+                Current Password
+                <input
+                  type="password"
+                  value={passwordForm.old_password}
+                  onChange={(e) =>
+                    setPasswordForm((f) => ({ ...f, old_password: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                  required
+                />
+              </label>
+              <label>
+                New Password
+                <input
+                  type="password"
+                  value={passwordForm.new_password}
+                  onChange={(e) =>
+                    setPasswordForm((f) => ({ ...f, new_password: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                  required
+                />
+              </label>
+              <label>
+                Confirm New Password
+                <input
+                  type="password"
+                  value={passwordForm.confirm_password}
+                  onChange={(e) =>
+                    setPasswordForm((f) => ({ ...f, confirm_password: e.target.value }))
+                  }
+                  className="w-full border rounded px-3 py-2"
+                  required
+                />
+              </label>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordForm(false);
+                    setPasswordForm({ old_password: "", new_password: "", confirm_password: "" });
+                  }}
+                  className="px-4 py-2 border rounded"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-2 bg-black text-white rounded">
+                  Change
+                </button>
               </div>
             </form>
           </div>

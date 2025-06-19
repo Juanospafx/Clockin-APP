@@ -1,121 +1,313 @@
-// src/pages/User/admin/pages/AdminPage.tsx
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import axios from "axios";
-
 import AdminSidebar from "../components/AdminSidebar";
 import AdminHeader from "../components/AdminHeader";
-import AdminTable, { AdminUser } from "../components/AdminTable";
+import AdminTable, { AdminUser as User } from "../components/AdminTable";
 
 const API = "http://localhost:8000";
 const ADMIN_API = `${API}/admin/users`;
 
 const AdminPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [filtered, setFiltered] = useState<AdminUser[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filtered, setFiltered] = useState<User[]>([]);
 
+  // — Modal Añadir/Editar —
   const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<AdminUser | null>(null);
-  const [form, setForm] = useState({ username: "", email: "", password: "", role: "user" as "user" | "admin", user_type: "" });
+  const [editing, setEditing] = useState<User | null>(null);
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    role: "field" as User["role"],
+  });
+
+  // — Modal Cambiar contraseña —
+  const [showPwdModal, setShowPwdModal] = useState(false);
+  const [pwdUserId, setPwdUserId] = useState<string>("");
+  const [newPassword, setNewPassword] = useState("");
 
   const token = localStorage.getItem("token") || "";
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
 
   useEffect(() => {
     if (token) fetchUsers();
   }, [token]);
 
-  const fetchUsers = async () => {
+  async function fetchUsers() {
     try {
-      const { data } = await axios.get<AdminUser[]>(ADMIN_API, { headers });
+      const { data } = await axios.get<User[]>(ADMIN_API, { headers });
       setUsers(data);
       setFiltered(data);
-    } catch {
-      setUsers([]);
-      setFiltered([]);
+    } catch (err) {
+      console.error("Error fetching users", err);
     }
-  };
+  }
 
-  const handleFilter = (term: string) => {
+  function handleFilter(term: string) {
     const t = term.toLowerCase();
     setFiltered(
       users.filter(u =>
-        u.username.toLowerCase().includes(t) ||
-        u.email.toLowerCase().includes(t) ||
-        u.role.toLowerCase().includes(t)
+        [u.username, u.email, u.role]
+          .some(f => f.toLowerCase().includes(t))
       )
     );
-  };
+  }
 
-  const resetModal = () => {
-    setShowForm(false);
+  function resetForm() {
     setEditing(null);
-    setForm({ username: "", email: "", password: "", role: "user", user_type: "" });
-  };
+    setForm({ username: "", email: "", password: "", role: "field" });
+  }
 
-  const openAdd = () => { resetModal(); setShowForm(true); setSidebarOpen(false); };
-  const openEdit = (u: AdminUser) => { setEditing(u); setForm({ username: u.username, email: u.email, password: "", role: u.role, user_type: u.user_type || "" }); setShowForm(true); setSidebarOpen(false); };
-  const handleDelete = async (id: string) => { if (!window.confirm("Delete this user?")) return; await axios.delete(`${ADMIN_API}/${id}`, { headers }); fetchUsers(); };
+  function openAdd() {
+    resetForm();
+    setShowForm(true);
+    setSidebarOpen(false);
+  }
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  function openEdit(id: string) {
+    const u = users.find(x => x.id === id);
+    if (!u) return;
+    setEditing(u);
+    setForm({
+      username: u.username,
+      email: u.email,
+      password: "",
+      role: u.role,
+    });
+    setShowForm(true);
+    setSidebarOpen(false);
+  }
 
-  const handleSubmit = async (e: FormEvent) => {
+  function handleChange(
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  }
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (form.role === "user" && !form.user_type) {
-      alert("Select a user type.");
-      return;
+    if (!form.username.trim() || !form.email.trim()) {
+      return alert("Usuario y email son obligatorios");
     }
+
+    // Armar payload sin user_type
+    const payload: any = {
+      username: form.username.trim(),
+      email: form.email.trim(),
+      role: form.role,
+    };
+    if (!editing || form.password.trim()) {
+      payload.password = form.password.trim();
+    }
+
     try {
       if (editing) {
-        await axios.put(
-          `${ADMIN_API}/${editing.id}`,
-          { username: form.username, email: form.email, role: form.role, user_type: form.role === "user" ? form.user_type : "" },
-          { headers }
-        );
+        await axios.put(`${ADMIN_API}/${editing.id}`, payload, { headers });
       } else {
-        const fd = new FormData();
-        fd.append("username", form.username);
-        fd.append("email", form.email);
-        fd.append("password", form.password);
-        fd.append("role", form.role);
-        if (form.role === "user") fd.append("user_type", form.user_type);
-        await axios.post(ADMIN_API, fd, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
+        await axios.post(ADMIN_API, payload, { headers });
       }
-      resetModal();
+      setShowForm(false);
       fetchUsers();
-    } catch {}
-  };
+    } catch (err: any) {
+      console.error("Error saving user:", err);
+      const msg = err.response?.data?.detail || err.message;
+      alert(`No se pudo guardar el usuario: ${msg}`);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("¿Borrar este usuario?")) return;
+    try {
+      await axios.delete(`${ADMIN_API}/${id}`, { headers });
+      fetchUsers();
+    } catch (err) {
+      console.error("Error deleting user", err);
+      alert("No se pudo borrar el usuario");
+    }
+  }
+
+  function openPwdModal(id: string) {
+    setPwdUserId(id);
+    setNewPassword("");
+    setShowPwdModal(true);
+    setSidebarOpen(false);
+  }
+
+  async function handlePwdSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!newPassword.trim()) return alert("Ingresa nueva contraseña");
+    try {
+      await axios.put(
+        `${ADMIN_API}/${pwdUserId}/password`,
+        { new_password: newPassword.trim() },
+        { headers }
+      );
+      setShowPwdModal(false);
+      alert("Contraseña actualizada");
+    } catch (err) {
+      console.error("Error changing password:", err);
+      alert("No se pudo cambiar la contraseña");
+    }
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onAddUser={openAdd} />
+      <AdminSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onAddUser={openAdd}
+      />
+
       <div className="flex-1 flex flex-col overflow-hidden">
-        <AdminHeader onToggleSidebar={() => setSidebarOpen(o => !o)} onAddUser={openAdd} onFilter={handleFilter} />
+        <AdminHeader
+          onToggleSidebar={() => setSidebarOpen(o => !o)}
+          onAddUser={openAdd}
+          onFilter={handleFilter}
+        />
+
         <main className="flex-1 overflow-auto p-6">
-          <AdminTable users={filtered} onEdit={openEdit} onDelete={handleDelete} />
+          <AdminTable
+            users={filtered}
+            onEdit={openEdit}
+            onDelete={handleDelete}
+          />
         </main>
       </div>
+
+      {/* Modal Crear/Editar */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-lg w-full max-w-md space-y-4">
-            <h2 className="text-xl font-semibold">{editing ? "Edit User" : "Add User"}</h2>
-            <input name="username" value={form.username} onChange={handleChange} placeholder="Username" className="w-full border rounded px-3 py-2" required />
-            <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" className="w-full border rounded px-3 py-2" required />
-            {!editing && <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Password" className="w-full border rounded px-3 py-2" required />}
-            <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-3 py-2">
-              <option value="admin">Admin</option>
-              <option value="user">User</option>
-            </select>
-            {form.role === "user" && (
-              <select name="user_type" value={form.user_type} onChange={handleChange} className="w-full border rounded px-3 py-2" required>
-                <option value="" disabled>-- User type --</option>
-                <option value="field">Field</option>
-                <option value="office">Office</option>
-              </select>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form
+            key={editing ? `edit-${editing.id}` : "add-user"}
+            onSubmit={handleSubmit}
+            className="bg-white p-6 rounded shadow-lg w-full max-w-md space-y-4"
+          >
+            <h2 className="text-xl font-semibold">
+              {editing ? "Editar usuario" : "Añadir usuario"}
+            </h2>
+
+            <input
+              name="username"
+              value={form.username}
+              onChange={handleChange}
+              placeholder="Usuario"
+              className="w-full border rounded px-3 py-2"
+              required
+            />
+
+            <input
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Email"
+              className="w-full border rounded px-3 py-2"
+              required
+            />
+
+            {!editing && (
+              <input
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Contraseña"
+                className="w-full border rounded px-3 py-2"
+                required
+              />
             )}
+
+            {editing && (
+              <>
+                <label className="block text-sm font-medium">Contraseña actual</label>
+                <input
+                  type="text"
+                  value="********"
+                  disabled
+                  className="w-full border rounded px-3 py-2 bg-gray-100 mb-2"
+                />
+                <p
+                  className="text-blue-600 text-sm cursor-pointer hover:underline mb-4"
+                  onClick={() => openPwdModal(editing.id)}
+                >
+                  You forgot your password?
+                </p>
+                <input
+                  name="password"
+                  type="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Nueva contraseña (opcional)"
+                  className="w-full border rounded px-3 py-2"
+                />
+              </>
+            )}
+
+            <select
+              name="role"
+              value={form.role}
+              onChange={handleChange}
+              className="w-full border rounded px-3 py-2"
+            >
+              <option value="admin">Admin</option>
+              <option value="field">Field</option>
+              <option value="office">Office</option>
+            </select>
+
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={resetModal} className="px-4 py-2 border rounded">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-black text-white rounded">Save</button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 border rounded"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-black text-white rounded"
+              >
+                Guardar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal Cambiar contraseña */}
+      {showPwdModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form
+            onSubmit={handlePwdSubmit}
+            className="bg-white p-6 rounded shadow-lg w-full max-w-sm space-y-4"
+          >
+            <h2 className="text-xl font-semibold">Cambiar contraseña</h2>
+            <input
+              type="password"
+              placeholder="Nueva contraseña"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              className="w-full border rounded px-3 py-2"
+              required
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPwdModal(false)}
+                className="px-4 py-2 border rounded"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded"
+              >
+                Guardar
+              </button>
             </div>
           </form>
         </div>

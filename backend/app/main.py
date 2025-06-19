@@ -3,80 +3,77 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from app.database import engine, SessionLocal
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from datetime import datetime, timedelta
-
 import logging
 
-# Importa tus routers
+from app.database import engine, SessionLocal
+from app import models
+
+# Routers
 from app.api.routes import router as api_router
 from app.api.routes.clockins import router as clockins_router
 from app.api.routes.clockin_history import router as history_router
 from app.api.routes.project_history import router as project_history_router
 from app.api.routes.summary import router as summary_router
 from app.api.routes.projects import router as projects_router
-from app.api.routes.detection.routes import router as detection_router 
-
-from app import models
+from app.api.routes.detection.routes import router as detection_router
+from app.api.routes.users import router as users_router  # ← nuevo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# —————————————
+# ———————————————————————
 # Configuración CORS
-# —————————————
+# ———————————————————————
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,            # or ["*"] during desarrollo
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],              # GET, POST, PUT, DELETE, OPTIONS…
-    allow_headers=["*"],              # Authorization, Content-Type, etc.
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# —————————————
+# ———————————————————————
 # Inicializar BD y servir estáticos
-# —————————————
+# ———————————————————————
 models.Base.metadata.create_all(bind=engine)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# —————————————
+# ———————————————————————
 # Routers
-# —————————————
+# ———————————————————————
 app.include_router(api_router)
+app.include_router(users_router)            # ← ruta /users
 app.include_router(clockins_router)
 app.include_router(history_router)
 app.include_router(project_history_router)
 app.include_router(summary_router)
 app.include_router(projects_router)
-app.include_router(detection_router) 
+app.include_router(detection_router)
 
-
-# —————————————
+# ———————————————————————
 # Scheduler para promover proyectos
-# —————————————
+# ———————————————————————
 def promote_projects_start_to_in_progress():
     db: Session = SessionLocal()
     try:
-        umbral = datetime.utcnow() - timedelta(days=1)
         from app.models import Project as ProjectModel, ProjectStatusEnum
-
+        threshold = datetime.utcnow() - timedelta(days=1)
         proyectos = (
             db.query(ProjectModel)
             .filter(
                 ProjectModel.status == ProjectStatusEnum.start,
-                ProjectModel.created_at <= umbral
+                ProjectModel.created_at <= threshold
             )
             .all()
         )

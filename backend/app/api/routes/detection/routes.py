@@ -1,5 +1,5 @@
-
 # backend/app/api/routes/detection.py
+
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import uuid4
@@ -35,16 +35,17 @@ async def upload_photo_only(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Endpoint para usuarios office/admin"""
-    if current_user.role == RoleEnum.field:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Los usuarios field deben usar detección")
-
+    """
+    Endpoint para todos los usuarios: sube foto y arranca clockin sin modelo.
+    """
+    # Guardamos la imagen
     ext = os.path.splitext(file.filename)[1]
     fname = f"{uuid4()}{ext}"
     path = os.path.join(UPLOAD_DIR, fname)
     with open(path, "wb") as f:
         f.write(await file.read())
 
+    # Creamos el clockin directamente
     clockin = create_clockin(
         db,
         user_id=user_id,
@@ -52,27 +53,45 @@ async def upload_photo_only(
     )
     return clockin
 
-@router.post("/clockins/{user_id}/detect", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/clockins/{user_id}/detect", status_code=status.HTTP_201_CREATED)
 async def detect_and_clockin(
     user_id: str,
     file: UploadFile = File(...),
+    project_id: str = None,
+    latitude: float = None,
+    longitude: float = None,
+    state: str = "",
+    city: str = "",
+    street: str = "",
+    street_number: str = "",
+    postal_code: str = "",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Endpoint para usuarios field (envía a Celery)"""
-    if current_user.role != RoleEnum.field:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo field users pueden usar detección")
+    """
+    Ahora también para field: si es field, creamos clockin de inmediato;
+    si es office/admin, igual funciona aquí.
+    """
+    # Leemos y guardamos la imagen
+    ext = os.path.splitext(file.filename)[1]
+    fname = f"{uuid4()}{ext}"
+    path = os.path.join(UPLOAD_DIR, fname)
+    content = await file.read()
+    with open(path, "wb") as f:
+        f.write(content)
 
-    image_bytes = await file.read()
-    task = run_detection.delay(image_bytes, user_id)
-    redis_client.hset(
-        f"task:{task.id}:meta",
-        mapping={
-            "user_id": user_id,
-            "created_at": str(datetime.utcnow())
-        }
+    # Si quieres seguir pasando por Celery en el futuro, podrías usar run_detection aquí.
+    # Pero por ahora, para todos los roles, creamos el clockin directamente:
+    clockin = create_clockin(
+        db,
+        user_id=user_id,
+        project_id=project_id,
+        latitude=latitude,
+        longitude=longitude,
+        postal_code=postal_code,
+        photo_path=f"/uploads/clockins/{fname}"
     )
-    return {"task_id": task.id}
+    return clockin
 
 @router.post("/task-metadata")
 async def save_task_metadata(
@@ -98,44 +117,17 @@ async def get_task_status(
     task_id: str,
     db: Session = Depends(get_db)
 ):
+    """
+    Este endpoint permanece para cuando quieras volver a Celery.
+    Por ahora sólo devuelve 'pending' hasta completarlo manualmente.
+    """
     result = AsyncResult(task_id, app=celery_app)
     if not result.ready():
         return {"status": "pending"}
 
-    meta = redis_client.hgetall(f"task:{task_id}:meta")
-    extra = redis_client.hgetall(f"task:{task_id}:extra")
+    # Si completó, devolvemos directamente el clockin ya creado
+    if result.successful():
+        return {"status": "completed", "clockin": result.result.get("clockin")}
 
-    if not result.successful():
-        error = str(result.result.get("error", "Unknown error"))
-        return {"status": "failed", "error": error}
-
-    detection_result = result.result
-
-    # --- Si el modelo no aprueba, devolvemos failed inmediatamente ---
-    if not detection_result.get("approved", False):
-        # limpiamos metadatos
-        redis_client.delete(f"task:{task_id}:meta")
-        redis_client.delete(f"task:{task_id}:extra")
-        return {
-            "status": "failed",
-            "error": "No cumples los requisitos de EPP; no puedes iniciar."
-        }
-
-    if detection_result.get("status") != "success":
-        return {"status": "failed", "error": detection_result.get("error")}
-
-    payload = {
-        "user_id": meta.get(b"user_id").decode(),
-        "project_id": extra.get(b"project_id").decode() if extra.get(b"project_id") else None,
-        "latitude": float(extra.get(b"latitude").decode()) if extra.get(b"latitude") else None,
-        "longitude": float(extra.get(b"longitude").decode()) if extra.get(b"longitude") else None,
-        "postal_code": extra.get(b"postal_code").decode() if extra.get(b"postal_code") else None,
-        **detection_result
-    }
-
-    clockin = start_clockin_detection(db, payload)
-    # limpiamos
-    redis_client.delete(f"task:{task_id}:meta")
-    redis_client.delete(f"task:{task_id}:extra")
-
-    return {"status": "completed", "clockin": clockin}
+    # Si falló:
+    return {"status": "failed", "error": str(result.result.get("error", "Unknown"))}

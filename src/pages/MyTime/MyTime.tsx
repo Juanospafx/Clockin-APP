@@ -36,6 +36,7 @@ function calculateHours(start: string, end?: string): number | undefined {
 const MyTime: React.FC = () => {
   const token = localStorage.getItem("token") || "";
   const userId = localStorage.getItem("user_id") || "";
+  // clave única por usuario
   const storageKey = `${COOKIE_KEY}_${userId}`;
 
   // Estado principal
@@ -44,7 +45,6 @@ const MyTime: React.FC = () => {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showClockin, setShowClockin] = useState(false);
-
   const [session, setSession] = useState<{
     id: string;
     startTime: string;
@@ -52,8 +52,9 @@ const MyTime: React.FC = () => {
     accumulated: number;
   } | null>(null);
   const [displayTime, setDisplayTime] = useState("00:00:00");
-
   const [editingEntry, setEditingEntry] = useState<ClockinEntry | null>(null);
+
+  // Campos para editar
   const [editHours, setEditHours] = useState(0);
   const [editState, setEditState] = useState("");
   const [editCity, setEditCity] = useState("");
@@ -62,6 +63,7 @@ const MyTime: React.FC = () => {
   const [editPostalCode, setEditPostalCode] = useState("");
   const [editLocation, setEditLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+  // Para saber si el usuario es admin
   const [isAdmin, setIsAdmin] = useState(false);
 
   const timerRef = useRef<number | null>(null);
@@ -110,7 +112,7 @@ const MyTime: React.FC = () => {
     }
   };
 
-  // 3) Formatea y cronómetro
+  // Formatea milisegundos a HH:MM:SS
   const formatTime = (ms: number) => {
     const tot = Math.floor(ms / 1000);
     const h = Math.floor(tot / 3600).toString().padStart(2, "0");
@@ -118,15 +120,18 @@ const MyTime: React.FC = () => {
     const s = (tot % 60).toString().padStart(2, "0");
     return `${h}:${m}:${s}`;
   };
+
+  // Inicia el cronómetro
   const startTimer = (sess: { accumulated: number; startedAt: number }) => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = window.setInterval(() => {
       const elapsed = sess.accumulated + (Date.now() - sess.startedAt);
       setDisplayTime(formatTime(elapsed));
     }, 1000);
+    setDisplayTime(formatTime(sess.accumulated + (Date.now() - sess.startedAt)));
   };
 
-  // 4) Inicia un nuevo Clockin
+  // Maneja el inicio de un nuevo clockin
   const handleStarted = (p: { id: string; startTime: string }) => {
     const sess = {
       id: p.id,
@@ -135,17 +140,16 @@ const MyTime: React.FC = () => {
       accumulated: 0,
     };
     setSession(sess);
+    // guarda sesión con clave de usuario
     Cookies.set(storageKey, JSON.stringify(sess), { expires: COOKIE_EXPIRES_DAYS });
     startTimer(sess);
     setShowClockin(false);
     loadEntries();
   };
 
-  // 5) Maneja Clock Out
+  // Maneja el clock out
   const handleClockOut = async () => {
-    if (!session?.id || !token) {
-      return alert("No hay sesión activa para cerrar");
-    }
+    if (!session || !token) return;
     try {
       const elapsed = session.accumulated + (Date.now() - session.startedAt);
       await axios.put(
@@ -164,7 +168,7 @@ const MyTime: React.FC = () => {
     }
   };
 
-  // 6) Editar y eliminar
+  // Preparar edición (solo admin verá el lápiz)
   const handleEdit = (e: ClockinEntry) => {
     setEditingEntry(e);
     setEditHours(e.hours ?? 0);
@@ -173,27 +177,33 @@ const MyTime: React.FC = () => {
     setEditStreet(e.street || "");
     setEditStreetNumber(e.street_number || "");
     setEditPostalCode(e.postalCode || "");
-    if (e.location_lat && e.location_long) {
-      setEditLocation({ lat: e.location_lat, lng: e.location_long });
-    }
+    setEditLocation(
+      e.location_lat && e.location_long
+        ? { lat: e.location_lat, lng: e.location_long }
+        : null
+    );
   };
+
+  // Cancelar edición
   const cancelEdit = () => {
     setEditingEntry(null);
     setEditLocation(null);
   };
+
+  // Guardar edición (solo admin)
   const saveEdit = async () => {
     if (!editingEntry || !token) return;
-    const payload: any = { hours: editHours };
-    payload.state = editState;
-    payload.city = editCity;
-    payload.street = editStreet;
-    payload.street_number = editStreetNumber;
-    payload.postal_code = editPostalCode;
-    if (editLocation) {
-      payload.location_lat = editLocation.lat;
-      payload.location_long = editLocation.lng;
-    }
     try {
+      const payload: any = { hours: editHours };
+      payload.state = editState;
+      payload.city = editCity;
+      payload.street = editStreet;
+      payload.street_number = editStreetNumber;
+      payload.postal_code = editPostalCode;
+      if (editLocation) {
+        payload.location_lat = editLocation.lat;
+        payload.location_long = editLocation.lng;
+      }
       await axios.patch(
         `http://localhost:8000/clockins/modify/${editingEntry.id}`,
         payload,
@@ -206,6 +216,8 @@ const MyTime: React.FC = () => {
       alert("No se pudo actualizar");
     }
   };
+
+  // Borrar entrada (todos pueden borrar)
   const handleDelete = async (id: string) => {
     if (session && id === session.id) return alert("Haz clock out primero");
     if (!token) return;
@@ -215,23 +227,23 @@ const MyTime: React.FC = () => {
       });
       loadEntries();
     } catch (e) {
-      console.error("Error eliminando:", e);
+      console.error(e);
       alert("Error eliminando");
     }
   };
 
-  // 7) Filtrado en memoria
+  // Filtrado en memoria según el término de búsqueda
   const filteredEntries = entries.filter((e) => {
-    const t = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase();
     return (
-      e.psCode.toLowerCase().includes(t) ||
-      e.userName.toLowerCase().includes(t) ||
-      e.projectName.toLowerCase().includes(t) ||
-      e.postalCode.toLowerCase().includes(t)
+      e.psCode.toLowerCase().includes(term) ||
+      e.userName.toLowerCase().includes(term) ||
+      e.projectName.toLowerCase().includes(term) ||
+      e.postalCode.toLowerCase().includes(term)
     );
   });
 
-  // 8) Efecto inicial: cargar y recuperar sesión
+  // Efecto de inicio: carga y recuperación de sesión
   useEffect(() => {
     loadEntries();
     const c = Cookies.get(storageKey);
@@ -241,7 +253,9 @@ const MyTime: React.FC = () => {
         const accumulated = s.accumulated + (Date.now() - s.startedAt);
         const sess = { ...s, accumulated, startedAt: Date.now() };
         setSession(sess);
-        Cookies.set(storageKey, JSON.stringify(sess), { expires: COOKIE_EXPIRES_DAYS });
+        Cookies.set(storageKey, JSON.stringify(sess), {
+          expires: COOKIE_EXPIRES_DAYS,
+        });
         startTimer(sess);
       } catch {
         Cookies.remove(storageKey);
@@ -252,16 +266,19 @@ const MyTime: React.FC = () => {
     };
   }, []);
 
-  // Si aún no hay sesión activa y abrimos Clockin
+  // Si aún no hay sesión activa y queremos iniciar → show Clockin
   if (showClockin && !session) {
-    return <Clockin token={token!} onStarted={handleStarted} />;
+    return <Clockin token={token} onStarted={handleStarted} />;
   }
 
   return (
     <div className="flex h-screen bg-white text-black">
+      {/* Sidebar */}
       <MyTimeSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
+      {/* Contenido principal */}
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
         <TimeCartHeader
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -269,30 +286,28 @@ const MyTime: React.FC = () => {
           onAddClockin={() => setShowClockin(true)}
           onToggleSidebar={() => setSidebarOpen((s) => !s)}
         />
-
-        <main className="flex-1 overflow-auto p-8">
+        {/* Tabla */}
+        <div className="flex-1 overflow-auto pt-6 px-8 lg:px-16">
           <TimeCartTable
             entries={filteredEntries}
             onEdit={isAdmin ? handleEdit : undefined}
             onDelete={handleDelete}
             isAdmin={isAdmin}
           />
-        </main>
+        </div>
       </div>
 
+      {/* Modal Edición */}
       {editingEntry && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white p-6 rounded shadow-lg w-full max-w-md space-y-4">
-            <h2 className="text-xl font-semibold">
-              Edit Clockin
-            </h2>
-
+            <h2 className="text-xl font-semibold">Edit Clockin</h2>
+            {/* Formulario */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm mb-1">Horas</label>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="number" step="0.01"
                   className="w-full border rounded px-2 py-1"
                   value={editHours}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
@@ -311,7 +326,6 @@ const MyTime: React.FC = () => {
                 />
               </div>
             </div>
-
             <div className="mb-4">
               <label className="block text-sm mb-1">Ubicación</label>
               <MapContainer
@@ -327,7 +341,6 @@ const MyTime: React.FC = () => {
                 geofenceRadius={100}
               />
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm mb-1">Estado</label>
@@ -370,17 +383,16 @@ const MyTime: React.FC = () => {
                 />
               </div>
             </div>
-
             <div className="flex justify-end gap-2">
               <button
                 onClick={cancelEdit}
-                className="px-4 py-2 border rounded hover:bg-gray-50 transition"
+                className="px-4 py-2 border rounded hover:bg-gray-50"
               >
                 Cancelar
               </button>
               <button
                 onClick={saveEdit}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 Guardar
               </button>
@@ -389,12 +401,13 @@ const MyTime: React.FC = () => {
         </div>
       )}
 
+      {/* Botón Clock Out */}
       {session && (
         <div className="fixed bottom-4 right-4 bg-white p-4 rounded shadow-lg z-40">
           <div className="font-mono text-2xl">{displayTime}</div>
           <button
             onClick={handleClockOut}
-            className="mt-2 w-full bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition"
+            className="mt-2 w-full bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
           >
             Clock Out
           </button>

@@ -1,115 +1,128 @@
-// src/pages/User/AdminUser.tsx
-import React, { useEffect, useState, ChangeEvent, FormEvent } from "react";
-import axios from "axios";
+// src/pages/User/admin/pages/AdminUser.tsx
 
+import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import axios from "axios";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminHeader from "./components/AdminHeader";
 import AdminTable, { AdminUser as User } from "./components/AdminTable";
 
-interface FormState {
-  username: string;
-  email: string;
-  password: string;
-  role: "admin" | "field" | "office";
-  user_type?: string;
-}
-
-const API_BASE = "http://localhost:8000";
-const ADMIN_API = `${API_BASE}/admin/users`;
+const API = "http://localhost:8000";
+const ADMIN_API = `${API}/admin/users`;
 
 const AdminUser: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>({
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+
+  // Estado del formulario
+  const [form, setForm] = useState({
     username: "",
     email: "",
     password: "",
-    role: "field",
+    role: "field" as User["role"],
   });
+  const [showPwdSection, setShowPwdSection] = useState(false);
 
-  const token = localStorage.getItem("token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const token = localStorage.getItem("token") || "";
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
 
   useEffect(() => {
-    fetchUsers();
+    if (token) fetchUsers();
   }, [token]);
 
-  const fetchUsers = async () => {
-    if (!token) return;
+  async function fetchUsers() {
     try {
-      const res = await axios.get<User[]>(ADMIN_API, { headers });
-      setUsers(res.data);
-      setFilteredUsers(res.data);
+      const { data } = await axios.get<User[]>(ADMIN_API, { headers });
+      setUsers(data);
+      setFilteredUsers(data);
     } catch (err) {
       console.error("Error fetching users", err);
     }
-  };
+  }
 
-  const handleFilter = (term: string) => {
+  function handleFilter(term: string) {
     const t = term.toLowerCase();
     setFilteredUsers(
-      users.filter(u => u.username.toLowerCase().includes(t) || u.email.toLowerCase().includes(t) || u.role.toLowerCase().includes(t))
+      users.filter(u =>
+        [u.username, u.email, u.role]
+          .some(f => f.toLowerCase().includes(t))
+      )
     );
-  };
+  }
 
-  const openAdd = () => {
-    setEditingUserId(null);
+  function openAdd() {
+    setEditingUser(null);
     setForm({ username: "", email: "", password: "", role: "field" });
+    setShowPwdSection(false);
     setShowForm(true);
     setSidebarOpen(false);
-  };
+  }
 
-  const openEdit = (id: string) => {
+  function openEdit(id: string) {
     const u = users.find(x => x.id === id);
     if (!u) return;
-    setEditingUserId(id);
-    setForm({ username: u.username, email: u.email, password: "", role: u.role, user_type: (u as any).user_type });
+    setEditingUser(u);
+    setForm({
+      username: u.username,
+      email: u.email,
+      password: "",
+      role: u.role,
+    });
+    setShowPwdSection(false);
     setShowForm(true);
     setSidebarOpen(false);
-  };
+  }
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Borrar este usuario?")) return;
+  function handleChangeForm(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  }
+
+  async function handleSubmitForm(e: FormEvent) {
+    e.preventDefault();
+    if (!form.username.trim() || !form.email.trim()) {
+      return alert("Usuario y email son obligatorios");
+    }
+
+    const payload: any = {
+      username: form.username.trim(),
+      email: form.email.trim(),
+      role: form.role,
+    };
+    if (form.password.trim()) {
+      payload.password = form.password.trim();
+    }
+
+    try {
+      if (editingUser) {
+        await axios.put(`${ADMIN_API}/${editingUser.id}`, payload, { headers });
+      } else {
+        await axios.post(ADMIN_API, payload, { headers });
+      }
+      setShowForm(false);
+      fetchUsers();
+    } catch (err: any) {
+      console.error("Error saving user:", err);
+      const detail = err.response?.data?.detail || err.message;
+      alert(`No se pudo guardar el usuario: ${detail}`);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm("¿Borrar este usuario?")) return;
     try {
       await axios.delete(`${ADMIN_API}/${id}`, { headers });
       fetchUsers();
     } catch (err) {
       console.error("Error deleting user", err);
+      alert("No se pudo borrar el usuario");
     }
-  };
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value } as FormState));
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!token) return;
-
-    const data = new FormData();
-    data.append("username", form.username);
-    data.append("email", form.email);
-    data.append("role", form.role);
-    if (!editingUserId) data.append("password", form.password);
-    if (form.user_type) data.append("user_type", form.user_type);
-
-    try {
-      if (editingUserId) {
-        await axios.put(`${ADMIN_API}/${editingUserId}`, data, { headers });
-      } else {
-        await axios.post(ADMIN_API, data, { headers: { ...headers, "Content-Type": "multipart/form-data" } });
-      }
-      setShowForm(false);
-      setEditingUserId(null);
-      fetchUsers();
-    } catch (err) {
-      console.error("Error saving user", err);
-    }
-  };
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -126,7 +139,7 @@ const AdminUser: React.FC = () => {
           onFilter={handleFilter}
         />
 
-        <main className="flex-1 overflow-auto p-8">
+        <main className="flex-1 overflow-auto p-6">
           <AdminTable
             users={filteredUsers}
             onEdit={openEdit}
@@ -135,48 +148,88 @@ const AdminUser: React.FC = () => {
         </main>
       </div>
 
+      {/* Modal Crear / Editar Usuario */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow-lg w-full max-w-md space-y-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form
+            // <-- Aquí está el truco: cambiamos el key según modo
+            key={editingUser ? `edit-${editingUser.id}` : "add-user"}
+            onSubmit={handleSubmitForm}
+            className="bg-white p-6 rounded shadow-lg w-full max-w-md space-y-4"
+          >
             <h2 className="text-xl font-semibold">
-              {editingUserId ? "Edit User" : "Add User"}
+              {editingUser ? "Editar Usuario" : "Añadir Usuario"}
             </h2>
 
+            {/* Usuario */}
             <input
               name="username"
               value={form.username}
-              onChange={handleChange}
-              placeholder="Username"
+              onChange={handleChangeForm}
+              placeholder="Usuario"
               className="w-full border rounded px-3 py-2"
               required
             />
 
+            {/* Email */}
             <input
               name="email"
               type="email"
               value={form.email}
-              onChange={handleChange}
+              onChange={handleChangeForm}
               placeholder="Email"
               className="w-full border rounded px-3 py-2"
               required
             />
 
-            {!editingUserId && (
+            {/* En modo editar mostramos la sección de password actual + enlace */}
+            {editingUser && (
+              <>
+                <label className="block text-sm font-medium">Contraseña actual</label>
+                <input
+                  type="text"
+                  value="********"
+                  disabled
+                  className="w-full border rounded px-3 py-2 bg-gray-100 mb-2"
+                />
+                <p
+                  className="text-blue-600 text-sm cursor-pointer hover:underline mb-4"
+                  onClick={() => setShowPwdSection(s => !s)}
+                >
+                  You forgot your password?
+                </p>
+              </>
+            )}
+
+            {/* Input de contraseña nueva (o contraseña de creación) */}
+            {!editingUser ? (
               <input
                 name="password"
                 type="password"
                 value={form.password}
-                onChange={handleChange}
-                placeholder="Password"
-                className="w-full border rounded px-3 py-2"
+                onChange={handleChangeForm}
+                placeholder="Contraseña"
                 required
+                className="w-full border rounded px-3 py-2"
               />
+            ) : (
+              showPwdSection && (
+                <input
+                  name="password"
+                  type="password"
+                  value={form.password}
+                  onChange={handleChangeForm}
+                  placeholder="Nueva contraseña"
+                  className="w-full border rounded px-3 py-2"
+                />
+              )
             )}
 
+            {/* Role */}
             <select
               name="role"
               value={form.role}
-              onChange={handleChange}
+              onChange={handleChangeForm}
               className="w-full border rounded px-3 py-2"
             >
               <option value="admin">Admin</option>
@@ -184,33 +237,20 @@ const AdminUser: React.FC = () => {
               <option value="office">Office</option>
             </select>
 
-            {form.role === "user" && (
-              <select
-                name="user_type"
-                value={form.user_type}
-                onChange={handleChange}
-                className="w-full border rounded px-3 py-2"
-                required
-              >
-                <option value="" disabled>-- User Type --</option>
-                <option value="field">Field</option>
-                <option value="office">Office</option>
-              </select>
-            )}
-
+            {/* Botones */}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => { setShowForm(false); setEditingUserId(null); }}
+                onClick={() => setShowForm(false)}
                 className="px-4 py-2 border rounded"
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-black text-white rounded"
               >
-                Save
+                Guardar
               </button>
             </div>
           </form>
