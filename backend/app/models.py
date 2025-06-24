@@ -113,3 +113,16 @@ class ProjectHistory(Base):
     project = relationship("Project", lazy="joined")
     user    = relationship("User",    lazy="joined")
     clockin = relationship("Clockin", lazy="joined")
+
+
+class UserLocation(Base):
+    __tablename__ = "user_locations"
+    id         = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id    = Column(PG_UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    clockin_id = Column(PG_UUID(as_uuid=True), ForeignKey("clockins.id"), nullable=True)
+    latitude   = Column(Float, nullable=False)
+    longitude  = Column(Float, nullable=False)
+    timestamp  = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user    = relationship("User")
+    clockin = relationship("Clockin")

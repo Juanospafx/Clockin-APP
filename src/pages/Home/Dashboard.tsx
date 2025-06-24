@@ -6,16 +6,23 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import SummaryCards from "./components/SummaryCards";
 import Chart from "./components/Chart";
+import UserMap from "./components/UserMap";
+import { getMe } from "../lib/users";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Si no hay token válido, redirigimos a login
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
+    } else {
+      getMe(token)
+        .then(({ data }) => setIsAdmin(data.role === "admin"))
+        .catch(() => setIsAdmin(false));
     }
   }, [navigate]);
 
@@ -36,6 +43,7 @@ const Dashboard: React.FC = () => {
 
           {/** 2b.2) Gráfico de barras */}
           <Chart />
+          {isAdmin && <UserMap />}
         </main>
       </div>
     </div>

@@ -1,7 +1,11 @@
 // src/pages/User/UserPage.tsx
 
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
-import axios from "axios";
+import {
+  getMe,
+  updateMe,
+  changeMyPassword,
+} from "../../lib/users";
 import UserHeader from "./UserHeader";
 import UserSidebar from "../components/UserSidebar";
 
@@ -14,7 +18,8 @@ interface User {
   profile_photo?: string | null;
 }
 
-const API_BASE = "http://localhost:8000";
+import api from "../../lib/api";
+const API_BASE = api.defaults.baseURL || "";
 
 const UserPage: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -33,11 +38,10 @@ const UserPage: React.FC = () => {
 
   useEffect(() => {
     if (!token) return;
-    axios
-      .get<User>(`${API_BASE}/users/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => {
-        setUser(res.data);
-        setForm({ username: res.data.username, email: res.data.email });
+    getMe(token)
+      .then(({ data }) => {
+        setUser(data as User);
+        setForm({ username: data.username, email: data.email });
       })
       .catch(console.error);
   }, [token]);
@@ -52,17 +56,8 @@ const UserPage: React.FC = () => {
     if (profilePhoto) data.append("profile_photo", profilePhoto);
 
     try {
-      const res = await axios.put<User>(
-        `${API_BASE}/users/me`,
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data"
-          }
-        }
-      );
-      setUser(res.data);
+      const { data: updated } = await updateMe(token, data);
+      setUser(updated);
       setShowProfileForm(false);
       setProfilePhoto(null);
     } catch {
@@ -76,19 +71,10 @@ const UserPage: React.FC = () => {
       return alert("New passwords do not match");
     }
     try {
-      await axios.put(
-        `${API_BASE}/users/me/password`,
-        {
-          old_password: passwordForm.old_password,
-          new_password: passwordForm.new_password
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
+      await changeMyPassword(token, {
+        old_password: passwordForm.old_password,
+        new_password: passwordForm.new_password,
+      });
       alert("Password changed successfully");
       setShowPasswordForm(false);
       setPasswordForm({ old_password: "", new_password: "", confirm_password: "" });
