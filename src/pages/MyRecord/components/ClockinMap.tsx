@@ -9,7 +9,13 @@ const ClockinMap: React.FC<Props> = ({ points }) => {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
+<<<<<<< HEAD
     libraries: ['places'],
+=======
+    libraries: ['places'],  // ✅ Usa la misma lista en todos los componentes
+    id: 'script-loader',     // ✅ Obligatorio si ya lo usaste en otro lado
+    version: 'weekly',       // ✅ Consistente con otros usos
+>>>>>>> 28ddb96 (Resuelto conflicto en ClockinMap.tsx)
   });
 
   if (loadError) return <div>Error loading map</div>;
@@ -20,8 +26,12 @@ const ClockinMap: React.FC<Props> = ({ points }) => {
     : { lat: 18.4861, lng: -69.9312 };
 
   return (
-    <GoogleMap mapContainerStyle={{ width: '100%', height: '300px' }} center={center} zoom={10}>
-      {points.map(p => (
+    <GoogleMap
+      mapContainerStyle={{ width: '100%', height: '300px' }}
+      center={center}
+      zoom={10}
+    >
+      {points.map((p) => (
         <Marker key={p.id} position={{ lat: p.latitude, lng: p.longitude }} />
       ))}
     </GoogleMap>
