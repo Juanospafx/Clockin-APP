@@ -5,7 +5,7 @@ import {
   getMe,
   updateMe,
   changeMyPassword,
-} from "../../lib/users";
+} from "../../../lib/users";
 import UserHeader from "./UserHeader";
 import UserSidebar from "../components/UserSidebar";
 
@@ -18,7 +18,7 @@ interface User {
   profile_photo?: string | null;
 }
 
-import api from "../../lib/api";
+import api from "../../../lib/api";
 const API_BASE = api.defaults.baseURL || "";
 
 const UserPage: React.FC = () => {

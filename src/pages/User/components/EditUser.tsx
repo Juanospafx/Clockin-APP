@@ -1,5 +1,5 @@
 import React, { useEffect, useState, ChangeEvent } from 'react';
-import { getMe, updateMe } from '../../lib/users';
+import { getMe, updateMe } from '../../../lib/users';
 
 interface User {
   id: string;
