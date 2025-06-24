@@ -15,5 +15,10 @@ export const deleteClockin = (token: string, id: string) =>
 export const startWithPhoto = (token: string, data: FormData) =>
   api.post('/clockins/photo', data, { headers: { Authorization: `Bearer ${token}` } });
 
+export interface ChartPoint {
+  month: number;
+  hours: number;
+}
+
 export const chartData = (userId: string) =>
-  api.get(`/clockins/${userId}/chart-data`);
+  api.get<ChartPoint[]>(`/clockins/${userId}/chart-data`);

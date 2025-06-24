@@ -39,6 +39,8 @@ const Chart: React.FC = () => {
               chartArray[month - 1].hours = Number(hours.toFixed(2));
             }
           });
+        } else {
+          console.warn("chartData returned invalid payload", res);
         }
           month: m,
           hours: 0,
