@@ -75,6 +75,16 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ isOpen, onClose, onAddUser 
           </button>
 
           <button
+            onClick={() => {
+              nav("/admin/map");
+              onClose();
+            }}
+            className="flex items-center gap-2 hover:bg-gray-100 p-2 rounded"
+          >
+            <img src="/map.svg" alt="Map" className="w-5 h-5" /> Users Map
+          </button>
+
+          <button
             onClick={() => { onAddUser(); onClose(); }}
             className="flex items-center gap-3 p-2 rounded hover:bg-gray-100"
           >
