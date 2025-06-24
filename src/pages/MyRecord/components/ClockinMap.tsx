@@ -1,6 +1,5 @@
 import React from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
-import { LocationPayload } from '../../../lib/locations';
 
 interface Props {
   points: { latitude: number; longitude: number; id: string }[];
@@ -8,7 +7,9 @@ interface Props {
 
 const ClockinMap: React.FC<Props> = ({ points }) => {
   const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
+    libraries: ['places'],
   });
 
   if (loadError) return <div>Error loading map</div>;

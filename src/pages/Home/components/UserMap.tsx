@@ -12,7 +12,9 @@ const UserMap: React.FC = () => {
   const [points, setPoints] = useState<Point[]>([]);
   const token = localStorage.getItem('token') || '';
   const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
+    libraries: ['places'],
   });
 
   useEffect(() => {

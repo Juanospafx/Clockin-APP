@@ -39,8 +39,9 @@ const MapContainer: React.FC<Props> = ({
   >(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: apiKey,
-    libraries: ["places"],
+    libraries: ['places'],
   });
 
   // Función auxiliar para extraer todos los campos de dirección

@@ -38,6 +38,7 @@ const Clockin: React.FC<ClockinProps> = ({ token, onStarted }) => {
   const storageKey = `${SESSION_STORAGE_KEY}_${userId}`;
 
   const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
     libraries: GM_LIBS,
   });
