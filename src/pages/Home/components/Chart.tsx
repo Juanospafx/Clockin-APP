@@ -33,11 +33,13 @@ const Chart: React.FC = () => {
         console.warn("No user_id en localStorage");
         return;
       }
-        res.forEach(({ month, hours }) => {
-      try {
-        const { data: res } = await chartData(userId);
-
-        const chartArray: ChartData[] = months.map((m) => ({
+        if (Array.isArray(res)) {
+          res.forEach(({ month, hours }) => {
+            if (month >= 1 && month <= 12) {
+              chartArray[month - 1].hours = Number(hours.toFixed(2));
+            }
+          });
+        }
           month: m,
           hours: 0,
         }));
