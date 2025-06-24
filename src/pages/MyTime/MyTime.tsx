@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, ChangeEvent } from "react";
 import axios from "axios";
+import { updateLocation } from "../../lib/clockins";
 import Cookies from "js-cookie";
 import MyTimeSidebar from "./components/MyTimeSidebar";
 import TimeCartHeader from "./components/TimeCartHeader";
@@ -265,6 +266,18 @@ const MyTime: React.FC = () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    const send = () => {
+      navigator.geolocation.getCurrentPosition(({ coords }) => {
+        updateLocation(session.id, coords.latitude, coords.longitude).catch(console.error);
+      });
+    };
+    send();
+    const id = window.setInterval(send, 300000);
+    return () => clearInterval(id);
+  }, [session]);
 
   // Si aún no hay sesión activa y queremos iniciar → show Clockin
   if (showClockin && !session) {

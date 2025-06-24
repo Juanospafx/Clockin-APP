@@ -10,6 +10,7 @@ import MyRecord       from "./pages/MyRecord";
 
 import User           from "./pages/User/User";
 import AdminPage      from "./pages/User/admin/components/AdminPage";
+import AdminMapPage   from "./pages/User/admin/components/AdminMapPage";
 
 import Login          from "./pages/login/Login";
 import PrivateRoute   from "./pages/login/components/PrivateRoute";
@@ -102,6 +103,15 @@ function App() {
             element={
               <PrivateRoute>
                 <AdminPage />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/admin/map"
+            element={
+              <PrivateRoute>
+                <AdminMapPage />
               </PrivateRoute>
             }
           />

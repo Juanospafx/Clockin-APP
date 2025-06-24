@@ -1,11 +1,9 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
-import axios from "axios";
+import { getUsers, saveUser, deleteUser, changePassword } from "../../../../lib/adminUsers";
 import AdminSidebar from "../components/AdminSidebar";
 import AdminHeader from "../components/AdminHeader";
 import AdminTable, { AdminUser as User } from "../components/AdminTable";
 
-const API = "http://localhost:8000";
-const ADMIN_API = `${API}/admin/users`;
 
 const AdminPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,10 +26,6 @@ const AdminPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState("");
 
   const token = localStorage.getItem("token") || "";
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
 
   useEffect(() => {
     if (token) fetchUsers();
@@ -39,7 +33,7 @@ const AdminPage: React.FC = () => {
 
   async function fetchUsers() {
     try {
-      const { data } = await axios.get<User[]>(ADMIN_API, { headers });
+      const { data } = await getUsers();
       setUsers(data);
       setFiltered(data);
     } catch (err) {
@@ -107,9 +101,9 @@ const AdminPage: React.FC = () => {
 
     try {
       if (editing) {
-        await axios.put(`${ADMIN_API}/${editing.id}`, payload, { headers });
+        await saveUser(editing.id, payload);
       } else {
-        await axios.post(ADMIN_API, payload, { headers });
+        await saveUser(null, payload);
       }
       setShowForm(false);
       fetchUsers();
@@ -123,7 +117,7 @@ const AdminPage: React.FC = () => {
   async function handleDelete(id: string) {
     if (!window.confirm("¿Borrar este usuario?")) return;
     try {
-      await axios.delete(`${ADMIN_API}/${id}`, { headers });
+      await deleteUser(id);
       fetchUsers();
     } catch (err) {
       console.error("Error deleting user", err);
@@ -142,11 +136,7 @@ const AdminPage: React.FC = () => {
     e.preventDefault();
     if (!newPassword.trim()) return alert("Ingresa nueva contraseña");
     try {
-      await axios.put(
-        `${ADMIN_API}/${pwdUserId}/password`,
-        { new_password: newPassword.trim() },
-        { headers }
-      );
+      await changePassword(pwdUserId, newPassword.trim());
       setShowPwdModal(false);
       alert("Contraseña actualizada");
     } catch (err) {

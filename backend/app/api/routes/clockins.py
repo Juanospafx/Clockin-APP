@@ -346,3 +346,48 @@ def delete_clockin(
     db.delete(clk)
     db.commit()
     return
+
+
+# --- Update location for active clockin ---
+@router.patch("/location/{clockin_id}")
+def update_location(
+    clockin_id: UUID,
+    payload: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    clk = db.query(ClockinModel).get(clockin_id)
+    if not clk:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Clockin not found")
+    if current_user.role != RoleEnum.admin and clk.user_id != current_user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorized")
+    clk.location_lat = payload.get("latitude")
+    clk.location_long = payload.get("longitude")
+    db.commit()
+    return {"status": "ok"}
+
+
+# --- List active locations (admin) ---
+@router.get("/active-locations")
+def active_locations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != RoleEnum.admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorized")
+    rows = (
+        db.query(ClockinModel, User.username)
+        .join(User, ClockinModel.user_id == User.id)
+        .filter(ClockinModel.status == "in_progress")
+        .all()
+    )
+    return [
+        {
+            "id": clk.id,
+            "user_id": clk.user_id,
+            "user_name": uname,
+            "location_lat": clk.location_lat or 0.0,
+            "location_long": clk.location_long or 0.0,
+        }
+        for clk, uname in rows
+    ]
