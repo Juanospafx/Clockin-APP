@@ -1,7 +1,7 @@
 // src/pages/ProjectHistory/ProjectHistory.tsx
 
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { getProjectHistory } from "../../lib/project_history";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 
@@ -18,10 +18,7 @@ const ProjectHistory: React.FC = () => {
   useEffect(() => {
     if (!token) return;
 
-    axios
-      .get<any[]>("http://localhost:8000/project_history/", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    getProjectHistory(token)
       .then(({ data }) => {
         const mapped: HistoryEntry[] = data.map((r) => {
           const code = r.project_id.slice(0, 6);

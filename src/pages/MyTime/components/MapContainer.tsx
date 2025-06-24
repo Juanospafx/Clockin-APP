@@ -38,8 +38,9 @@ const MapContainer: React.FC<Props> = ({
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: apiKey,
-    libraries: ["places"],
+    libraries: ['places'],
   });
 
   useEffect(() => {

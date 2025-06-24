@@ -1,7 +1,14 @@
 // src/pages/MyTime/MyTime.tsx
 
 import React, { useEffect, useState, useRef, ChangeEvent } from "react";
-import axios from "axios";
+import {
+  listForUser,
+  endClockin,
+  modifyClockin,
+  deleteClockin,
+} from "../../lib/clockins";
+import { getMe } from "../../lib/users";
+import { postLocation } from "../../lib/locations";
 import Cookies from "js-cookie";
 import MyTimeSidebar from "./components/MyTimeSidebar";
 import TimeCartHeader from "./components/TimeCartHeader";
@@ -50,7 +57,9 @@ const MyTime: React.FC = () => {
     startTime: string;
     startedAt: number;
     accumulated: number;
+    paused?: boolean;
   } | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const [displayTime, setDisplayTime] = useState("00:00:00");
   const [editingEntry, setEditingEntry] = useState<ClockinEntry | null>(null);
 
@@ -71,10 +80,7 @@ const MyTime: React.FC = () => {
   // 1) Obtener rol de usuario
   useEffect(() => {
     if (!token) return;
-    axios
-      .get<UserMe>("http://localhost:8000/users/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    getMe(token)
       .then(({ data }) => setIsAdmin(data.role === "admin"))
       .catch(() => setIsAdmin(false));
   }, [token]);
@@ -83,10 +89,7 @@ const MyTime: React.FC = () => {
   const loadEntries = async () => {
     if (!token || !userId) return;
     try {
-      const { data } = await axios.get<any[]>(
-        `http://localhost:8000/clockins/user/${userId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const { data } = await listForUser(token, userId);
       setEntries(
         data.map((e) => ({
           id: e.id,
@@ -138,6 +141,7 @@ const MyTime: React.FC = () => {
       startTime: p.startTime,
       startedAt: Date.now(),
       accumulated: 0,
+      paused: false,
     };
     setSession(sess);
     // guarda sesión con clave de usuario
@@ -151,20 +155,41 @@ const MyTime: React.FC = () => {
   const handleClockOut = async () => {
     if (!session || !token) return;
     try {
-      const elapsed = session.accumulated + (Date.now() - session.startedAt);
-      await axios.put(
-        `http://localhost:8000/clockins/end/${session.id}`,
-        { elapsed_ms: elapsed },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const elapsed =
+        session.accumulated + (isPaused ? 0 : Date.now() - session.startedAt);
+      await endClockin(token, session.id, { elapsed_ms: elapsed });
       if (timerRef.current) clearInterval(timerRef.current);
       Cookies.remove(storageKey);
       setSession(null);
+      setIsPaused(false);
       setDisplayTime("00:00:00");
       loadEntries();
     } catch (e) {
       console.error(e);
       alert("Error al hacer clock out");
+    }
+  };
+
+  const handlePauseResume = () => {
+    if (!session) return;
+    if (isPaused) {
+      const newSess = { ...session, startedAt: Date.now(), paused: false };
+      setSession(newSess);
+      Cookies.set(storageKey, JSON.stringify(newSess), {
+        expires: COOKIE_EXPIRES_DAYS,
+      });
+      startTimer(newSess);
+      setIsPaused(false);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      const accumulated = session.accumulated + (Date.now() - session.startedAt);
+      const newSess = { ...session, accumulated, paused: true };
+      setSession(newSess);
+      Cookies.set(storageKey, JSON.stringify(newSess), {
+        expires: COOKIE_EXPIRES_DAYS,
+      });
+      setDisplayTime(formatTime(accumulated));
+      setIsPaused(true);
     }
   };
 
@@ -204,11 +229,7 @@ const MyTime: React.FC = () => {
         payload.location_lat = editLocation.lat;
         payload.location_long = editLocation.lng;
       }
-      await axios.patch(
-        `http://localhost:8000/clockins/modify/${editingEntry.id}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await modifyClockin(token, editingEntry.id, payload);
       cancelEdit();
       loadEntries();
     } catch (err) {
@@ -222,9 +243,7 @@ const MyTime: React.FC = () => {
     if (session && id === session.id) return alert("Haz clock out primero");
     if (!token) return;
     try {
-      await axios.delete(`http://localhost:8000/clockins/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await deleteClockin(token, id);
       loadEntries();
     } catch (e) {
       console.error(e);
@@ -250,13 +269,19 @@ const MyTime: React.FC = () => {
     if (c) {
       try {
         const s = JSON.parse(c);
-        const accumulated = s.accumulated + (Date.now() - s.startedAt);
-        const sess = { ...s, accumulated, startedAt: Date.now() };
-        setSession(sess);
-        Cookies.set(storageKey, JSON.stringify(sess), {
-          expires: COOKIE_EXPIRES_DAYS,
-        });
-        startTimer(sess);
+        if (s.paused) {
+          setSession(s);
+          setIsPaused(true);
+          setDisplayTime(formatTime(s.accumulated));
+        } else {
+          const accumulated = s.accumulated + (Date.now() - s.startedAt);
+          const sess = { ...s, accumulated, startedAt: Date.now() };
+          setSession(sess);
+          Cookies.set(storageKey, JSON.stringify(sess), {
+            expires: COOKIE_EXPIRES_DAYS,
+          });
+          startTimer(sess);
+        }
       } catch {
         Cookies.remove(storageKey);
       }
@@ -265,6 +290,23 @@ const MyTime: React.FC = () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  // Track location every 5 minutes while session active
+  useEffect(() => {
+    if (!session || !token || isPaused) return;
+    const sendLocation = () => {
+      navigator.geolocation.getCurrentPosition(({ coords }) => {
+        postLocation(token, {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          clockin_id: session.id,
+        }).catch(console.error);
+      });
+    };
+    sendLocation();
+    const int = setInterval(sendLocation, 300000);
+    return () => clearInterval(int);
+  }, [session, token, isPaused]);
 
   // Si aún no hay sesión activa y queremos iniciar → show Clockin
   if (showClockin && !session) {
@@ -405,6 +447,12 @@ const MyTime: React.FC = () => {
       {session && (
         <div className="fixed bottom-4 right-4 bg-white p-4 rounded shadow-lg z-40">
           <div className="font-mono text-2xl">{displayTime}</div>
+          <button
+            onClick={handlePauseResume}
+            className="mt-2 w-full bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+          >
+            {isPaused ? 'Resume' : 'Pause'}
+          </button>
           <button
             onClick={handleClockOut}
             className="mt-2 w-full bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"

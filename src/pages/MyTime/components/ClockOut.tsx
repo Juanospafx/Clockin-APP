@@ -1,5 +1,5 @@
 import React from "react";
-import axios from "axios";
+import { endClockin } from "../../../lib/clockins";
 
 interface ClockOutProps {
   token: string;
@@ -16,11 +16,7 @@ const ClockOut: React.FC<ClockOutProps> = ({ token, clockinId, onCompleted }) =>
     try {
       setIsProcessing(true);
       // URL CORREGIDA: /clockins/end/{id}
-      await axios.put(
-        `http://localhost:8000/clockins/end/${clockinId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await endClockin(token, clockinId, {});
       localStorage.removeItem("clockinSession");
       onCompleted();
     } catch (err: any) {

@@ -1,13 +1,17 @@
 // src/pages/User/admin/pages/AdminUser.tsx
 
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
-import axios from "axios";
+import {
+  adminGetUsers,
+  adminCreateUser,
+  adminUpdateUser,
+  adminDeleteUser,
+  adminChangePassword,
+} from "../../../lib/users";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminHeader from "./components/AdminHeader";
 import AdminTable, { AdminUser as User } from "./components/AdminTable";
 
-const API = "http://localhost:8000";
-const ADMIN_API = `${API}/admin/users`;
 
 const AdminUser: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -37,7 +41,7 @@ const AdminUser: React.FC = () => {
 
   async function fetchUsers() {
     try {
-      const { data } = await axios.get<User[]>(ADMIN_API, { headers });
+      const { data } = await adminGetUsers(token);
       setUsers(data);
       setFilteredUsers(data);
     } catch (err) {
@@ -100,9 +104,9 @@ const AdminUser: React.FC = () => {
 
     try {
       if (editingUser) {
-        await axios.put(`${ADMIN_API}/${editingUser.id}`, payload, { headers });
+        await adminUpdateUser(token, editingUser.id, payload);
       } else {
-        await axios.post(ADMIN_API, payload, { headers });
+        await adminCreateUser(token, payload);
       }
       setShowForm(false);
       fetchUsers();
@@ -116,7 +120,7 @@ const AdminUser: React.FC = () => {
   async function handleDelete(id: string) {
     if (!window.confirm("¿Borrar este usuario?")) return;
     try {
-      await axios.delete(`${ADMIN_API}/${id}`, { headers });
+      await adminDeleteUser(token, id);
       fetchUsers();
     } catch (err) {
       console.error("Error deleting user", err);
