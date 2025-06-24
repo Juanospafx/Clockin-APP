@@ -1,8 +1,8 @@
 // src/pages/User/admin/MyRecord.tsx
 import React, { useEffect, useState, ChangeEvent } from "react";
-import api from "../lib/api";
-import { getMe } from "../lib/users";
-import { getHistoryAll, getHistoryForUser, updateHistory, deleteHistory } from "../lib/history";
+import api from "../../lib/api";
+import { getMe } from "../../lib/users";
+import { getHistoryAll, getHistoryForUser, updateHistory, deleteHistory } from "../../lib/history";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import MyRecordSidebar from "./components/my_record_sidebar";
@@ -10,7 +10,7 @@ import MyRecordHeader from "./components/my_record_header";
 import MyRecordTable, { RecordEntry } from "./components/my_record_table";
 import MapContainer from "./components/MapContainer";
 import ClockinMap from "./components/ClockinMap";
-import { getLocationsByClockin } from "../lib/locations";
+import { getLocationsByClockin } from "../../lib/locations";
 
 const API_BASE = api.defaults.baseURL || "";
 

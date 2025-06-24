@@ -1,7 +1,7 @@
 // src/pages/Home/components/SummaryCards.tsx
 import { useEffect, useState } from "react";
-import { getMe } from "../../lib/users";
-import { getSummaryAll, getSummaryForUser } from "../../lib/summary";
+import { getMe } from "../../../lib/users";
+import { getSummaryAll, getSummaryForUser } from "../../../lib/summary";
 
 interface SummaryData {
   week: number;

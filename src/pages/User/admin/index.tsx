@@ -7,7 +7,7 @@ import {
   adminUpdateUser,
   adminDeleteUser,
   adminChangePassword,
-} from "../../lib/users";
+} from "../../../lib/users";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminHeader from "./components/AdminHeader";
 import AdminTable, { AdminUser as User } from "./components/AdminTable";

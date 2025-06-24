@@ -7,7 +7,7 @@ import Header from "./components/Header";
 import SummaryCards from "./components/SummaryCards";
 import Chart from "./components/Chart";
 import UserMap from "./components/UserMap";
-import { getMe } from "../lib/users";
+import { getMe } from "../../lib/users";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();

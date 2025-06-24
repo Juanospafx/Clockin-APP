@@ -1,6 +1,6 @@
 import React from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
-import { LocationPayload } from '../../lib/locations';
+import { LocationPayload } from '../../../lib/locations';
 
 interface Props {
   points: { latitude: number; longitude: number; id: string }[];

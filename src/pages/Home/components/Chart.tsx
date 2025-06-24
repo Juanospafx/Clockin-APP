@@ -1,6 +1,6 @@
 // src/pages/Home/components/Chart.tsx
 import { useEffect, useState } from "react";
-import { chartData } from "../../lib/clockins";
+import { chartData } from "../../../lib/clockins";
 import {
   BarChart,
   Bar,

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
-import { getAllLocations } from '../../lib/locations';
+import { getAllLocations } from '../../../lib/locations';
 
 interface Point {
   id: string;
