@@ -1,14 +1,18 @@
 // src/pages/User/admin/MyRecord.tsx
 import React, { useEffect, useState, ChangeEvent } from "react";
-import axios from "axios";
+import api from "../../lib/api";
+import { getMe } from "../../lib/users";
+import { getHistoryAll, getHistoryForUser, updateHistory, deleteHistory } from "../../lib/history";
 import dayjs from "dayjs";
 import * as XLSX from "xlsx";
 import MyRecordSidebar from "./components/my_record_sidebar";
 import MyRecordHeader from "./components/my_record_header";
 import MyRecordTable, { RecordEntry } from "./components/my_record_table";
 import MapContainer from "./components/MapContainer";
+import ClockinMap from "./components/ClockinMap";
+import { getLocationsByClockin } from "../../lib/locations";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = api.defaults.baseURL || "";
 
 const MyRecord: React.FC = () => {
   const [records, setRecords] = useState<RecordEntry[]>([]);
@@ -17,6 +21,7 @@ const MyRecord: React.FC = () => {
   const [editing, setEditing] = useState<RecordEntry | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [mapPoints, setMapPoints] = useState<any[] | null>(null);
 
   // Edit form state
   const [hours, setHours] = useState<number>(0);
@@ -33,15 +38,14 @@ const MyRecord: React.FC = () => {
 
   // Load records and role
   useEffect(() => {
-    axios
-      .get<{ role: string }>(`${API_BASE}/users/me`, { headers })
+    getMe(token!)
       .then(({ data }) => {
         if (data.role === "admin") {
           setIsAdmin(true);
-          return axios.get<any[]>(`${API_BASE}/clockin_history/all`, { headers });
+          return getHistoryAll(token!);
         } else {
           setIsAdmin(false);
-          return axios.get<any[]>(`${API_BASE}/clockin_history/${userId}`, { headers });
+          return getHistoryForUser(token!, userId);
         }
       })
       .then(({ data }) => {
@@ -127,30 +131,22 @@ const MyRecord: React.FC = () => {
   // Save edits
   const saveEdit = async () => {
     if (!editing) return;
-    await axios.patch(
-      `${API_BASE}/clockins/modify/${editing.clockinId}`,
-      {
-        hours,
-        state: stateField,
-        city,
-        street,
-        street_number: streetNumber,
-        postal_code: postalCode,
-        ...(location ? { location_lat: location.lat, location_long: location.lng } : {}),
-      },
-      { headers }
-    );
-    await axios.patch(
-      `${API_BASE}/clockin_history/${editing.id}`,
-      {
-        state: stateField,
-        city,
-        street,
-        street_number: streetNumber,
-        postal_code: postalCode,
-      },
-      { headers }
-    );
+    await modifyClockin(token!, editing.clockinId, {
+      hours,
+      state: stateField,
+      city,
+      street,
+      street_number: streetNumber,
+      postal_code: postalCode,
+      ...(location ? { location_lat: location.lat, location_long: location.lng } : {}),
+    });
+    await updateHistory(token!, editing.id, {
+      state: stateField,
+      city,
+      street,
+      street_number: streetNumber,
+      postal_code: postalCode,
+    });
     setEditing(null);
     window.location.reload();
   };
@@ -158,8 +154,17 @@ const MyRecord: React.FC = () => {
   // Delete entry
   const handleDelete = async (id: string) => {
     if (!window.confirm("¿Borrar este registro?")) return;
-    await axios.delete(`${API_BASE}/clockin_history/${id}`, { headers });
+    await deleteHistory(token!, id);
     setRecords(rs => rs.filter(r => r.id !== id));
+  };
+
+  const handleViewMap = async (clockinId: string) => {
+    try {
+      const { data } = await getLocationsByClockin(token!, clockinId);
+      setMapPoints(data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -180,6 +185,7 @@ const MyRecord: React.FC = () => {
             onEdit={openEdit}
             onDelete={handleDelete}
             onPreview={path => setPreviewPath(path)}
+            onViewMap={handleViewMap}
           />
         </div>
       </div>
@@ -279,10 +285,18 @@ const MyRecord: React.FC = () => {
           onClick={() => setPreviewPath(null)}
         >
           <img
-            src={`${API_BASE}${previewPath}`} 
+            src={`${API_BASE}${previewPath}`}
             alt="Preview"
             className="max-h-full max-w-full rounded"
           />
+        </div>
+      )}
+
+      {mapPoints && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setMapPoints(null)}>
+          <div onClick={e => e.stopPropagation()} className="bg-white p-4 rounded w-full max-w-xl">
+            <ClockinMap points={mapPoints} />
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 // src/pages/Login.tsx
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
@@ -15,7 +15,7 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:8000/login', form, {
+      const res = await api.post('/login', form, {
         headers: { 'Content-Type': 'application/json' },
       });
       const { access_token, role, user_id } = res.data;

@@ -1,7 +1,8 @@
 // src/pages/MyTime/components/Clockin.tsx
 
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import { getProjects } from "../../../lib/projects";
+import { startWithPhoto } from "../../../lib/clockins";
 import { useNavigate } from "react-router-dom";
 import { useJsApiLoader } from "@react-google-maps/api";
 import MapContainer from "./MapContainer";
@@ -37,6 +38,7 @@ const Clockin: React.FC<ClockinProps> = ({ token, onStarted }) => {
   const storageKey = `${SESSION_STORAGE_KEY}_${userId}`;
 
   const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
     libraries: GM_LIBS,
   });
@@ -49,11 +51,9 @@ const Clockin: React.FC<ClockinProps> = ({ token, onStarted }) => {
   // 2) Carga de proyectos
   useEffect(() => {
     if (!token) return;
-    axios.get<Project[]>("http://localhost:8000/projects", {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    .then(r => setProjects(r.data))
-    .catch(() => alert("Error cargando proyectos"));
+    getProjects(token)
+      .then(({ data }) => setProjects(data))
+      .catch(() => alert("Error cargando proyectos"));
   }, [token]);
 
   // 3) Inicializar cámara
@@ -103,11 +103,7 @@ const Clockin: React.FC<ClockinProps> = ({ token, onStarted }) => {
       try {
         setStatus("pending");
         // **Todos los usuarios usan este endpoint**
-        const { data: clk } = await axios.post<ClockinOut>(
-          "http://localhost:8000/clockins/photo",
-          form,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const { data: clk } = await startWithPhoto(token, form);
         // Guardamos la sesión SOLO para este userId
         localStorage.setItem(
           storageKey,
