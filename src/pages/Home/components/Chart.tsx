@@ -33,18 +33,12 @@ const Chart: React.FC = () => {
         console.warn("No user_id en localStorage");
         return;
       }
-        if (Array.isArray(res)) {
-          res.forEach(({ month, hours }) => {
-            if (month >= 1 && month <= 12) {
-              chartArray[month - 1].hours = Number(hours.toFixed(2));
-            }
-          });
-        }
-          month: m,
-          hours: 0,
-        }));
 
-        // Validar que res.data sea un arreglo antes de usar forEach
+      try {
+        const res = await chartData(userId); // suponiendo que chartData devuelve { data: [{month, hours}, ...] }
+
+        const chartArray = months.map((m) => ({ month: m, hours: 0 }));
+
         if (Array.isArray(res?.data)) {
           res.data.forEach(({ month, hours }) => {
             if (month >= 1 && month <= 12) {
