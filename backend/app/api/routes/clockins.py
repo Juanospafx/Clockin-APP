@@ -19,6 +19,7 @@ from app.models import (
     Project,
     User,
     RoleEnum,
+    ClockinLocation,
 )
 from app.api.routes.auth import get_current_user
 from app.crud.clockins import get_monthly_hours, create_clockin
@@ -59,6 +60,23 @@ class ClockinOut(BaseModel):
 class MonthlyHours(BaseModel):
     month: int
     hours: float
+
+    class Config:
+        from_attributes = True
+
+# --- Esquemas para ubicaciones ---
+class LocationIn(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class LocationOut(BaseModel):
+    id: UUID
+    clockin_id: UUID
+    user_id: UUID
+    timestamp: datetime
+    latitude: float
+    longitude: float
 
     class Config:
         from_attributes = True
@@ -346,3 +364,51 @@ def delete_clockin(
     db.delete(clk)
     db.commit()
     return
+
+# -------------------------------------------------
+# Nuevos endpoints para registrar ubicaciones
+# -------------------------------------------------
+
+@router.post("/{clockin_id}/locations", response_model=LocationOut, status_code=status.HTTP_201_CREATED)
+def add_clockin_location(
+    clockin_id: UUID,
+    payload: LocationIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    clk = db.query(ClockinModel).get(clockin_id)
+    if not clk or (current_user.role != RoleEnum.admin and clk.user_id != current_user.id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Clockin not found")
+
+    loc = ClockinLocation(
+        id=uuid4(),
+        clockin_id=clockin_id,
+        user_id=current_user.id,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+    )
+    db.add(loc)
+    db.commit()
+    db.refresh(loc)
+    return loc
+
+
+@router.get("/{clockin_id}/locations", response_model=List[LocationOut])
+def list_clockin_locations(
+    clockin_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    clk = db.query(ClockinModel).get(clockin_id)
+    if not clk:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Clockin not found")
+    if current_user.role != RoleEnum.admin and clk.user_id != current_user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Not authorized")
+
+    locs = (
+        db.query(ClockinLocation)
+        .filter(ClockinLocation.clockin_id == clockin_id)
+        .order_by(ClockinLocation.timestamp.asc())
+        .all()
+    )
+    return locs

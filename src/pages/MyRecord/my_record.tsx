@@ -7,6 +7,7 @@ import MyRecordSidebar from "./components/my_record_sidebar";
 import MyRecordHeader from "./components/my_record_header";
 import MyRecordTable, { RecordEntry } from "./components/my_record_table";
 import MapContainer from "./components/MapContainer";
+import ClockinMap from "./components/ClockinMap";
 
 const API_BASE = "http://localhost:8000";
 
@@ -17,6 +18,7 @@ const MyRecord: React.FC = () => {
   const [editing, setEditing] = useState<RecordEntry | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [mapClockinId, setMapClockinId] = useState<string | null>(null);
 
   // Edit form state
   const [hours, setHours] = useState<number>(0);
@@ -180,6 +182,7 @@ const MyRecord: React.FC = () => {
             onEdit={openEdit}
             onDelete={handleDelete}
             onPreview={path => setPreviewPath(path)}
+            onViewMap={id => setMapClockinId(id)}
           />
         </div>
       </div>
@@ -279,11 +282,15 @@ const MyRecord: React.FC = () => {
           onClick={() => setPreviewPath(null)}
         >
           <img
-            src={`${API_BASE}${previewPath}`} 
+            src={`${API_BASE}${previewPath}`}
             alt="Preview"
             className="max-h-full max-w-full rounded"
           />
         </div>
+      )}
+
+      {mapClockinId && (
+        <ClockinMap clockinId={mapClockinId} onClose={() => setMapClockinId(null)} />
       )}
     </div>
   );

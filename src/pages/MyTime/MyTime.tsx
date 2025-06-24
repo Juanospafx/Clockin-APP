@@ -131,6 +131,20 @@ const MyTime: React.FC = () => {
     setDisplayTime(formatTime(sess.accumulated + (Date.now() - sess.startedAt)));
   };
 
+  // Envía ubicación actual al backend
+  const sendCurrentLocation = (clkId: string) => {
+    if (!navigator.geolocation || !token) return;
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      axios
+        .post(
+          `http://localhost:8000/clockins/${clkId}/locations`,
+          { latitude: coords.latitude, longitude: coords.longitude },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        .catch(() => {});
+    });
+  };
+
   // Maneja el inicio de un nuevo clockin
   const handleStarted = (p: { id: string; startTime: string }) => {
     const sess = {
@@ -145,6 +159,7 @@ const MyTime: React.FC = () => {
     startTimer(sess);
     setShowClockin(false);
     loadEntries();
+    sendCurrentLocation(p.id);
   };
 
   // Maneja el clock out
@@ -265,6 +280,14 @@ const MyTime: React.FC = () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  // Enviar ubicación cada 5 minutos mientras haya sesión activa
+  useEffect(() => {
+    if (!session) return;
+    sendCurrentLocation(session.id);
+    const id = window.setInterval(() => sendCurrentLocation(session.id), 300000);
+    return () => window.clearInterval(id);
+  }, [session]);
 
   // Si aún no hay sesión activa y queremos iniciar → show Clockin
   if (showClockin && !session) {
