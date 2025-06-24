@@ -1,8 +1,7 @@
 // src/pages/User/admin/components/MyRecordTable.tsx
 
 import React, { FC } from "react";
-import { Pencil, MapPin } from "lucide-react";
-import api from "../../../lib/api";
+import { Pencil } from "lucide-react";
 
 export interface RecordEntry {
   id: string;
@@ -21,12 +20,11 @@ interface Props {
   isAdmin: boolean;
   onEdit: (e: RecordEntry) => void;
   onPreview: (photoPath: string) => void;
-  onViewMap?: (clockinId: string) => void;
 }
 
-const API_BASE = api.defaults.baseURL || "";
+const API_BASE = "http://localhost:8000";
 
-const MyRecordTable: FC<Props> = ({ entries, isAdmin, onEdit, onPreview, onViewMap }) => {
+const MyRecordTable: FC<Props> = ({ entries, isAdmin, onEdit, onPreview }) => {
   // ① Calcula total de horas considerando solo valores >= 0
   const totalHours = entries
     .map(e => Math.max(0, e.hours))
@@ -105,21 +103,13 @@ const MyRecordTable: FC<Props> = ({ entries, isAdmin, onEdit, onPreview, onViewM
                     {Math.max(0, e.hours).toFixed(2)}
                   </td>
                   {isAdmin && (
-                    <td className="px-4 py-3 text-sm text-gray-700 text-right space-x-2">
+                    <td className="px-4 py-3 text-sm text-gray-700 text-right">
                       <button
                         onClick={() => onEdit(e)}
                         className="p-1 bg-yellow-100 hover:bg-yellow-200 rounded"
                       >
                         <Pencil size={16} className="text-yellow-700" />
                       </button>
-                      {onViewMap && (
-                        <button
-                          onClick={() => onViewMap(e.clockinId)}
-                          className="p-1 bg-blue-100 hover:bg-blue-200 rounded"
-                        >
-                          <MapPin size={16} className="text-blue-700" />
-                        </button>
-                      )}
                     </td>
                   )}
                 </tr>
@@ -163,22 +153,12 @@ const MyRecordTable: FC<Props> = ({ entries, isAdmin, onEdit, onPreview, onViewM
                   </span>
                 </div>
                 {isAdmin && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => onEdit(e)}
-                      className="p-1 bg-yellow-100 hover:bg-yellow-200 rounded"
-                    >
-                      <Pencil size={16} className="text-yellow-700" />
-                    </button>
-                    {onViewMap && (
-                      <button
-                        onClick={() => onViewMap(e.clockinId)}
-                        className="p-1 bg-blue-100 hover:bg-blue-200 rounded"
-                      >
-                        <MapPin size={16} className="text-blue-700" />
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    onClick={() => onEdit(e)}
+                    className="p-1 bg-yellow-100 hover:bg-yellow-200 rounded"
+                  >
+                    <Pencil size={16} className="text-yellow-700" />
+                  </button>
                 )}
               </div>
 

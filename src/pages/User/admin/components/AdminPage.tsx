@@ -1,15 +1,11 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
-import {
-  adminGetUsers,
-  adminCreateUser,
-  adminUpdateUser,
-  adminDeleteUser,
-  adminChangePassword,
-} from "../../../../lib/users";
+import axios from "axios";
 import AdminSidebar from "../components/AdminSidebar";
 import AdminHeader from "../components/AdminHeader";
 import AdminTable, { AdminUser as User } from "../components/AdminTable";
 
+const API = "http://localhost:8000";
+const ADMIN_API = `${API}/admin/users`;
 
 const AdminPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -43,7 +39,7 @@ const AdminPage: React.FC = () => {
 
   async function fetchUsers() {
     try {
-      const { data } = await adminGetUsers(token);
+      const { data } = await axios.get<User[]>(ADMIN_API, { headers });
       setUsers(data);
       setFiltered(data);
     } catch (err) {
@@ -111,9 +107,9 @@ const AdminPage: React.FC = () => {
 
     try {
       if (editing) {
-        await adminUpdateUser(token, editing.id, payload);
+        await axios.put(`${ADMIN_API}/${editing.id}`, payload, { headers });
       } else {
-        await adminCreateUser(token, payload);
+        await axios.post(ADMIN_API, payload, { headers });
       }
       setShowForm(false);
       fetchUsers();
@@ -127,7 +123,7 @@ const AdminPage: React.FC = () => {
   async function handleDelete(id: string) {
     if (!window.confirm("¿Borrar este usuario?")) return;
     try {
-      await adminDeleteUser(token, id);
+      await axios.delete(`${ADMIN_API}/${id}`, { headers });
       fetchUsers();
     } catch (err) {
       console.error("Error deleting user", err);
@@ -146,7 +142,11 @@ const AdminPage: React.FC = () => {
     e.preventDefault();
     if (!newPassword.trim()) return alert("Ingresa nueva contraseña");
     try {
-      await adminChangePassword(token, pwdUserId, { new_password: newPassword.trim() });
+      await axios.put(
+        `${ADMIN_API}/${pwdUserId}/password`,
+        { new_password: newPassword.trim() },
+        { headers }
+      );
       setShowPwdModal(false);
       alert("Contraseña actualizada");
     } catch (err) {

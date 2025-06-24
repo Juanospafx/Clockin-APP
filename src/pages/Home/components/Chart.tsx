@@ -1,6 +1,6 @@
 // src/pages/Home/components/Chart.tsx
 import { useEffect, useState } from "react";
-import { chartData } from "../../../lib/clockins";
+import axios from "axios";
 import {
   BarChart,
   Bar,
@@ -33,34 +33,26 @@ const Chart: React.FC = () => {
         console.warn("No user_id en localStorage");
         return;
       }
-        if (Array.isArray(res)) {
-          res.forEach(({ month, hours }) => {
-            if (month >= 1 && month <= 12) {
-              chartArray[month - 1].hours = Number(hours.toFixed(2));
-            }
-          });
-        }
+      try {
+        const res = await axios.get<{ month: number; hours: number }[]>(
+          `http://localhost:8000/clockins/${userId}/chart-data`
+        );
+        // Inicializamos un array con 0 horas
+        const chartArray: ChartData[] = months.map((m) => ({
           month: m,
           hours: 0,
         }));
-
-        // Validar que res.data sea un arreglo antes de usar forEach
-        if (Array.isArray(res?.data)) {
-          res.data.forEach(({ month, hours }) => {
-            if (month >= 1 && month <= 12) {
-              chartArray[month - 1].hours = Number(hours.toFixed(2));
-            }
-          });
-        } else {
-          console.warn("chartData() no devolvió un arreglo válido:", res);
-        }
-
+        // Rellenamos con los datos recibidos
+        res.data.forEach(({ month, hours }) => {
+          if (month >= 1 && month <= 12) {
+            chartArray[month - 1].hours = Number(hours.toFixed(2));
+          }
+        });
         setData(chartArray);
       } catch (err) {
         console.error("Failed to fetch chart data", err);
       }
     };
-
     fetchData();
   }, []);
 

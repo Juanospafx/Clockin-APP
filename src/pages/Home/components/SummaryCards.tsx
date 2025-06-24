@@ -1,7 +1,6 @@
 // src/pages/Home/components/SummaryCards.tsx
 import { useEffect, useState } from "react";
-import { getMe } from "../../../lib/users";
-import { getSummaryAll, getSummaryForUser } from "../../../lib/summary";
+import axios from "axios";
 
 interface SummaryData {
   week: number;
@@ -30,16 +29,31 @@ const SummaryCards: React.FC = () => {
   useEffect(() => {
     const fetchSummary = async () => {
       if (!token || !userId) return;
+      const headers = { Authorization: `Bearer ${token}` };
+
       try {
-        const { data: me } = await getMe(token);
-        if (me.role === "admin") {
+        // 1) Saber rol de quien está autenticado
+        const meRes = await axios.get<MeResponse>(
+          "http://localhost:8000/users/me",
+          { headers }
+        );
+
+        if (meRes.data.role === "admin") {
           setIsAdmin(true);
-          const { data } = await getSummaryAll(token);
-          setSummary(data);
+          // 2a) Si es admin, pedimos el endpoint /summary/all
+          const respAll = await axios.get<SummaryData>(
+            "http://localhost:8000/summary/all",
+            { headers }
+          );
+          setSummary(respAll.data);
         } else {
           setIsAdmin(false);
-          const { data } = await getSummaryForUser(token, userId);
-          setSummary(data);
+          // 2b) Si no es admin, pedimos /summary/{userId}
+          const respUser = await axios.get<SummaryData>(
+            `http://localhost:8000/summary/${userId}`,
+            { headers }
+          );
+          setSummary(respUser.data);
         }
       } catch (err) {
         console.error("Failed to fetch summary data", err);

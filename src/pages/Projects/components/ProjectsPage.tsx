@@ -1,13 +1,7 @@
 // src/pages/Projects/components/ProjectsPage.tsx
 
 import React, { useState, useEffect, ChangeEvent } from "react";
-import {
-  getProjects as fetchProjects,
-  deleteProject,
-  updateProject,
-  createProject,
-} from "../../../lib/projects";
-import { getMe } from "../../../lib/users";
+import axios from "axios";
 import dayjs from "dayjs";
 
 import ProjectHeader from "../components/ProjectHeader";
@@ -69,15 +63,23 @@ const ProjectsPage: React.FC<Props> = ({ onToggleSidebar }) => {
   // 0) Obtener rol de usuario
   useEffect(() => {
     if (!token) return;
-    getMe(token)
-      .then(({ data }) => setIsAdmin(data.role === "admin"))
+    axios
+      .get<UserMe>("http://localhost:8000/users/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then(({ data }) => {
+        setIsAdmin(data.role === "admin");
+      })
       .catch(() => setIsAdmin(false));
   }, [token]);
 
   // 1) Cargar todos los proyectos
   useEffect(() => {
     if (!token) return;
-    fetchProjects(token)
+    axios
+      .get<ProjectFromApi[]>("http://localhost:8000/projects", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .then(({ data }) => {
         const mapped = data.map((p) => ({
           id: p.id,
@@ -150,8 +152,14 @@ const ProjectsPage: React.FC<Props> = ({ onToggleSidebar }) => {
   // 5) Borrar proyecto
   const handleDelete = async (id: string) => {
     if (!token) return;
-    await deleteProject(token!, id);
-    const { data } = await fetchProjects(token!);
+    await axios.delete(`http://localhost:8000/projects/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    // recargar lista
+    const { data } = await axios.get<ProjectFromApi[]>(
+      "http://localhost:8000/projects",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
     const mapped = data.map((p) => ({
       id: p.id,
       projectName: p.name,
@@ -189,13 +197,22 @@ const ProjectsPage: React.FC<Props> = ({ onToggleSidebar }) => {
     }
 
     if (editingProject) {
-      await updateProject(token!, editingProject.id, payload);
+      await axios.put(
+        `http://localhost:8000/projects/${editingProject.id}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
     } else {
-      await createProject(token!, payload);
+      await axios.post("http://localhost:8000/projects", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
     }
 
     // recargar lista
-    const { data: data2 } = await fetchProjects(token!);
+    const { data: data2 } = await axios.get<ProjectFromApi[]>(
+      "http://localhost:8000/projects",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
     const mapped2 = data2.map((p) => ({
       id: p.id,
       projectName: p.name,
