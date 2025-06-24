@@ -57,7 +57,9 @@ const MyTime: React.FC = () => {
     startTime: string;
     startedAt: number;
     accumulated: number;
+    paused?: boolean;
   } | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
   const [displayTime, setDisplayTime] = useState("00:00:00");
   const [editingEntry, setEditingEntry] = useState<ClockinEntry | null>(null);
 
@@ -139,6 +141,7 @@ const MyTime: React.FC = () => {
       startTime: p.startTime,
       startedAt: Date.now(),
       accumulated: 0,
+      paused: false,
     };
     setSession(sess);
     // guarda sesión con clave de usuario
@@ -152,16 +155,41 @@ const MyTime: React.FC = () => {
   const handleClockOut = async () => {
     if (!session || !token) return;
     try {
-      const elapsed = session.accumulated + (Date.now() - session.startedAt);
+      const elapsed =
+        session.accumulated + (isPaused ? 0 : Date.now() - session.startedAt);
       await endClockin(token, session.id, { elapsed_ms: elapsed });
       if (timerRef.current) clearInterval(timerRef.current);
       Cookies.remove(storageKey);
       setSession(null);
+      setIsPaused(false);
       setDisplayTime("00:00:00");
       loadEntries();
     } catch (e) {
       console.error(e);
       alert("Error al hacer clock out");
+    }
+  };
+
+  const handlePauseResume = () => {
+    if (!session) return;
+    if (isPaused) {
+      const newSess = { ...session, startedAt: Date.now(), paused: false };
+      setSession(newSess);
+      Cookies.set(storageKey, JSON.stringify(newSess), {
+        expires: COOKIE_EXPIRES_DAYS,
+      });
+      startTimer(newSess);
+      setIsPaused(false);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      const accumulated = session.accumulated + (Date.now() - session.startedAt);
+      const newSess = { ...session, accumulated, paused: true };
+      setSession(newSess);
+      Cookies.set(storageKey, JSON.stringify(newSess), {
+        expires: COOKIE_EXPIRES_DAYS,
+      });
+      setDisplayTime(formatTime(accumulated));
+      setIsPaused(true);
     }
   };
 
@@ -241,13 +269,19 @@ const MyTime: React.FC = () => {
     if (c) {
       try {
         const s = JSON.parse(c);
-        const accumulated = s.accumulated + (Date.now() - s.startedAt);
-        const sess = { ...s, accumulated, startedAt: Date.now() };
-        setSession(sess);
-        Cookies.set(storageKey, JSON.stringify(sess), {
-          expires: COOKIE_EXPIRES_DAYS,
-        });
-        startTimer(sess);
+        if (s.paused) {
+          setSession(s);
+          setIsPaused(true);
+          setDisplayTime(formatTime(s.accumulated));
+        } else {
+          const accumulated = s.accumulated + (Date.now() - s.startedAt);
+          const sess = { ...s, accumulated, startedAt: Date.now() };
+          setSession(sess);
+          Cookies.set(storageKey, JSON.stringify(sess), {
+            expires: COOKIE_EXPIRES_DAYS,
+          });
+          startTimer(sess);
+        }
       } catch {
         Cookies.remove(storageKey);
       }
@@ -259,7 +293,7 @@ const MyTime: React.FC = () => {
 
   // Track location every 5 minutes while session active
   useEffect(() => {
-    if (!session || !token) return;
+    if (!session || !token || isPaused) return;
     const sendLocation = () => {
       navigator.geolocation.getCurrentPosition(({ coords }) => {
         postLocation(token, {
@@ -272,7 +306,7 @@ const MyTime: React.FC = () => {
     sendLocation();
     const int = setInterval(sendLocation, 300000);
     return () => clearInterval(int);
-  }, [session, token]);
+  }, [session, token, isPaused]);
 
   // Si aún no hay sesión activa y queremos iniciar → show Clockin
   if (showClockin && !session) {
@@ -413,6 +447,12 @@ const MyTime: React.FC = () => {
       {session && (
         <div className="fixed bottom-4 right-4 bg-white p-4 rounded shadow-lg z-40">
           <div className="font-mono text-2xl">{displayTime}</div>
+          <button
+            onClick={handlePauseResume}
+            className="mt-2 w-full bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+          >
+            {isPaused ? 'Resume' : 'Pause'}
+          </button>
           <button
             onClick={handleClockOut}
             className="mt-2 w-full bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
