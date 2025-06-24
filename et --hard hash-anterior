@@ -1,0 +1,11 @@
+[33m5a75892[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mcodex/modificar-gestión-de-cors-y-agregar-mapa-en-dashboard[m[33m, [m[1;31morigin/codex/modificar-gestión-de-cors-y-agregar-mapa-en-dashboard[m[33m)[m Show usernames on admin map and guard chart data
+[33mbd440be[m Fix chart data mapping and add timer pause
+[33me9ec147[m Finalizado merge + cambios en Chart.tsx
+[33mc901850[m Resuelto conflicto en ClockinMap.tsx
+[33m6f90f81[m Fix Google Maps loader options
+[33m3b69612[m Fix lib import paths
+[33m8ee6c70[m[33m ([m[1;32mmapa_de_usuario_CORS[m[33m, [m[1;32mMapa-CORS/modificar-gestión-de-cors-y-agregar-mapa-en-dashboard[m[33m)[m Centralize API calls and add location tracking
+[33m79f3dee[m[33m ([m[1;31morigin/main[m[33m)[m Update README.md
+[33mf93ecac[m[33m ([m[1;31morigin/mapa_de_usuario_CORS[m[33m, [m[1;32mmain[m[33m)[m Modificar contraseña y eliminación de uso del modelo
+[33m897cc66[m Actualiza submódulo yolov5 a última versión
+[33md9f3937[m Initial commit
