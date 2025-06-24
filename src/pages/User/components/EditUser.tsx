@@ -1,5 +1,5 @@
 import React, { useEffect, useState, ChangeEvent } from 'react';
-import axios from 'axios';
+import { getMe, updateMe } from '../../lib/users';
 
 interface User {
   id: string;
@@ -19,11 +19,8 @@ const EditUser: React.FC = () => {
     const fetchUser = async () => {
       if (!token) return alert('No estás autenticado');
       try {
-        const resp = await axios.get<User>(
-          `http://localhost:8000/users/me`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setUser(resp.data);
+        const { data } = await getMe(token);
+        setUser(data as User);
       } catch (err) {
         console.error(err);
         alert('Error al cargar tus datos');
@@ -45,17 +42,10 @@ const EditUser: React.FC = () => {
     if (!user) return;
     if (!token) return alert('No estás autenticado');
     try {
-      await axios.put(
-        `http://localhost:8000/users/${user.id}`,
-        // sólo enviamos los campos que pueden editarse:
-        { username: user.username.trim(), email: user.email.trim() },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const formData = new FormData();
+      formData.append('username', user.username.trim());
+      formData.append('email', user.email.trim());
+      await updateMe(token, formData);
       alert('¡Datos actualizados con éxito!');
     } catch (err: any) {
       console.error(err);

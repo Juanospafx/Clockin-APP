@@ -1,6 +1,6 @@
 // src/pages/Home/components/Chart.tsx
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { chartData } from "../../lib/clockins";
 import {
   BarChart,
   Bar,
@@ -34,9 +34,7 @@ const Chart: React.FC = () => {
         return;
       }
       try {
-        const res = await axios.get<{ month: number; hours: number }[]>(
-          `http://localhost:8000/clockins/${userId}/chart-data`
-        );
+        const { data: res } = await chartData(userId);
         // Inicializamos un array con 0 horas
         const chartArray: ChartData[] = months.map((m) => ({
           month: m,
