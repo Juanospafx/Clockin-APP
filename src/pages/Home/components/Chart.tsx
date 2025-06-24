@@ -33,24 +33,32 @@ const Chart: React.FC = () => {
         console.warn("No user_id en localStorage");
         return;
       }
+
       try {
         const { data: res } = await chartData(userId);
-        // Inicializamos un array con 0 horas
+
         const chartArray: ChartData[] = months.map((m) => ({
           month: m,
           hours: 0,
         }));
-        // Rellenamos con los datos recibidos
-        res.data.forEach(({ month, hours }) => {
-          if (month >= 1 && month <= 12) {
-            chartArray[month - 1].hours = Number(hours.toFixed(2));
-          }
-        });
+
+        // Validar que res.data sea un arreglo antes de usar forEach
+        if (Array.isArray(res?.data)) {
+          res.data.forEach(({ month, hours }) => {
+            if (month >= 1 && month <= 12) {
+              chartArray[month - 1].hours = Number(hours.toFixed(2));
+            }
+          });
+        } else {
+          console.warn("chartData() no devolvió un arreglo válido:", res);
+        }
+
         setData(chartArray);
       } catch (err) {
         console.error("Failed to fetch chart data", err);
       }
     };
+
     fetchData();
   }, []);
 
