@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from uuid import UUID
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from app.database import SessionLocal
 from app.models import UserLocation, User
@@ -34,6 +34,9 @@ class LocationOut(BaseModel):
     class Config:
         from_attributes = True
 
+class LocationWithUser(LocationOut):
+    username: str
+
 @router.post("/", response_model=LocationOut)
 def create_location(data: LocationCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     loc = UserLocation(
@@ -47,9 +50,26 @@ def create_location(data: LocationCreate, db: Session = Depends(get_db), current
     db.refresh(loc)
     return loc
 
-@router.get("/all", response_model=List[LocationOut])
+@router.get("/all", response_model=List[LocationWithUser])
 def all_locations(db: Session = Depends(get_db)):
-    return db.query(UserLocation).order_by(UserLocation.timestamp.desc()).all()
+    rows = (
+        db.query(UserLocation, User.username)
+        .join(User, UserLocation.user_id == User.id)
+        .order_by(UserLocation.timestamp.desc())
+        .all()
+    )
+    return [
+        {
+            "id": loc.id,
+            "user_id": loc.user_id,
+            "clockin_id": loc.clockin_id,
+            "latitude": loc.latitude,
+            "longitude": loc.longitude,
+            "timestamp": loc.timestamp,
+            "username": username,
+        }
+        for loc, username in rows
+    ]
 
 @router.get("/clockin/{clockin_id}", response_model=List[LocationOut])
 def clockin_locations(clockin_id: UUID, db: Session = Depends(get_db)):

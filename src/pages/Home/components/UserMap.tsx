@@ -6,6 +6,7 @@ interface Point {
   id: string;
   latitude: number;
   longitude: number;
+  username: string;
 }
 
 const UserMap: React.FC = () => {
@@ -22,7 +23,7 @@ const UserMap: React.FC = () => {
       if (!token) return;
       try {
         const { data } = await getAllLocations(token);
-        setPoints(data);
+        setPoints(data as unknown as Point[]);
       } catch (e) {
         console.error(e);
       }
@@ -43,7 +44,11 @@ const UserMap: React.FC = () => {
     <div className="p-4">
       <GoogleMap mapContainerStyle={{ width: '100%', height: '300px' }} center={center} zoom={6}>
         {points.map(p => (
-          <Marker key={p.id} position={{ lat: p.latitude, lng: p.longitude }} />
+          <Marker
+            key={p.id}
+            position={{ lat: p.latitude, lng: p.longitude }}
+            label={p.username}
+          />
         ))}
       </GoogleMap>
     </div>
