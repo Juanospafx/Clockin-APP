@@ -113,3 +113,17 @@ class ProjectHistory(Base):
     project = relationship("Project", lazy="joined")
     user    = relationship("User",    lazy="joined")
     clockin = relationship("Clockin", lazy="joined")
+
+# Nueva tabla para registrar ubicaciones periódicas de cada clockin
+class ClockinLocation(Base):
+    __tablename__ = "clockin_locations"
+
+    id         = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    clockin_id = Column(PG_UUID(as_uuid=True), ForeignKey("clockins.id", ondelete="CASCADE"), nullable=False)
+    user_id    = Column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    timestamp  = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    latitude   = Column(Float, nullable=False)
+    longitude  = Column(Float, nullable=False)
+
+    clockin = relationship("Clockin", lazy="joined")
+    user    = relationship("User",    lazy="joined")
