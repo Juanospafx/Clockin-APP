@@ -33,7 +33,7 @@ const Chart: React.FC = () => {
         console.warn("No user_id en localStorage");
         return;
       }
-
+        res.forEach(({ month, hours }) => {
       try {
         const { data: res } = await chartData(userId);
 
