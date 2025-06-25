@@ -11,6 +11,7 @@ import {
 import AdminSidebar from "./components/AdminSidebar";
 import AdminHeader from "./components/AdminHeader";
 import AdminTable, { AdminUser as User } from "./components/AdminTable";
+import UserMap from "../../Home/components/UserMap";
 
 
 const AdminUser: React.FC = () => {
@@ -149,6 +150,9 @@ const AdminUser: React.FC = () => {
             onEdit={openEdit}
             onDelete={handleDelete}
           />
+          <div className="mt-6 h-96">
+            <UserMap />
+          </div>
         </main>
       </div>
 

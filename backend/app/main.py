@@ -2,6 +2,10 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -31,13 +35,16 @@ app = FastAPI()
 # ———————————————————————
 # Configuración CORS
 # ———————————————————————
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    
-]
+frontend_origins = os.getenv("FRONTEND_ORIGINS")
+if frontend_origins:
+    origins = [o.strip() for o in frontend_origins.split(",") if o.strip()]
+else:
+    origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
