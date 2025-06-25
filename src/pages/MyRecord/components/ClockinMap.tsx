@@ -7,15 +7,10 @@ interface Props {
 
 const ClockinMap: React.FC<Props> = ({ points }) => {
   const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
-<<<<<<< HEAD
-    libraries: ['places'],
-=======
-    libraries: ['places'],  // ✅ Usa la misma lista en todos los componentes
-    id: 'script-loader',     // ✅ Obligatorio si ya lo usaste en otro lado
-    version: 'weekly',       // ✅ Consistente con otros usos
->>>>>>> 28ddb96 (Resuelto conflicto en ClockinMap.tsx)
+    libraries: ['places'], 
+    id: 'script-loader',     
+    version: 'weekly',      
   });
 
   if (loadError) return <div>Error loading map</div>;
@@ -39,3 +34,4 @@ const ClockinMap: React.FC<Props> = ({ points }) => {
 };
 
 export default ClockinMap;
+
