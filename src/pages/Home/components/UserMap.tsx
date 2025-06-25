@@ -43,13 +43,24 @@ const UserMap: React.FC = () => {
   return (
     <div className="p-4">
       <GoogleMap mapContainerStyle={{ width: '100%', height: '300px' }} center={center} zoom={6}>
-        {points.map(p => (
-          <Marker
-            key={p.id}
-            position={{ lat: p.latitude, lng: p.longitude }}
-            label={p.username}
-          />
-        ))}
+        {points.map((p) => {
+          const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+              <circle cx="32" cy="32" r="16" fill="#3b82f6" stroke="white" stroke-width="2" />
+              <text x="32" y="38" text-anchor="middle" font-size="12" font-weight="bold" fill="white">${p.username}</text>
+            </svg>`;
+          return (
+            <Marker
+              key={p.id}
+              position={{ lat: p.latitude, lng: p.longitude }}
+              icon={{
+                url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+                scaledSize: new window.google.maps.Size(40, 40),
+                anchor: new window.google.maps.Point(20, 20),
+              }}
+            />
+          );
+        })}
       </GoogleMap>
     </div>
   );
