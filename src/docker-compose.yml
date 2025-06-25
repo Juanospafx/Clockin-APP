@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: TuPassMySegura123!
+      POSTGRES_DB: clockin_app
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    restart: always
+    # Si tienes variables específicas del frontend en src/.env, descomenta:
+    # env_file:
+    #   - ./src/.env
+    ports:
+      - "3000:3000"
+    # (Opcional para hot-reload en desarrollo)
+    # volumes:
+    #   - ./src:/app
+
+volumes:
+  db_data:
