@@ -11,6 +11,7 @@ import {
 import AdminSidebar from "./components/AdminSidebar";
 import AdminHeader from "./components/AdminHeader";
 import AdminTable, { AdminUser as User } from "./components/AdminTable";
+import UserMap from "../../Home/components/UserMap";
 
 
 const AdminUser: React.FC = () => {
@@ -143,12 +144,16 @@ const AdminUser: React.FC = () => {
           onFilter={handleFilter}
         />
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 space-y-6">
           <AdminTable
             users={filteredUsers}
             onEdit={openEdit}
             onDelete={handleDelete}
           />
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold mb-2">User Locations</h2>
+            <UserMap />
+          </div>
         </main>
       </div>
 

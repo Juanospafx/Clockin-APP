@@ -6,37 +6,44 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: TuPassMySegura123!
+      POSTGRES_PASSWORD: TuPassMySegura123!  # Contraseña simple
       POSTGRES_DB: clockin_app
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - clockin-net
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     restart: always
-    env_file:
-      - ./backend/.env
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=TuPassMySegura123!  # MISMA CONTRASEÑA
+      - POSTGRES_DB=clockin_app
     ports:
       - "8000:8000"
     depends_on:
       - db
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    networks:
+      - clockin-net
 
   frontend:
     build:
-      context: ./src
+      context: ./
       dockerfile: Dockerfile
     restart: always
-    # Si tienes variables específicas del frontend en src/.env, descomenta:
-    # env_file:
-    #   - ./src/.env
     ports:
       - "3000:3000"
-    # (Opcional para hot-reload en desarrollo)
-    # volumes:
-    #   - ./src:/app
+    networks:
+      - clockin-net
 
 volumes:
   db_data:
+
+networks:
+  clockin-net:
+    driver: bridge

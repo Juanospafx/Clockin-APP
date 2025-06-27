@@ -1,28 +1,23 @@
-# Dockerfile para tu app Vite/React
-
 FROM node:18-alpine
 
-# 1) Directorio de trabajo
 WORKDIR /app
 
-# 2) Copia package.json y package-lock.json e instala dependencias
-COPY package.json package-lock.json ./
+# 1. Copia solo los archivos necesarios para instalar dependencias
+COPY ../package.json ../package-lock.json ./
+
+# 2. Instala dependencias
 RUN npm ci
 
-# 3) Copia TODO tu proyecto: src/, public/, src/styles/, etc.
+# 3. Copia el resto de los archivos del frontend
 COPY . .
 
-# 4) Depuración: confirma que el CSS global existe
-RUN ls -l src/styles/global.css
-
-# 5) Construye la app con Vite (solo vite build)
+# 4. Construye la app con variables de entorno
 RUN npm run build
 
-# 6) Instala un servidor estático ligero
+# 5. Instala servidor estático
 RUN npm install -g serve
 
-# 7) Expón el puerto que vas a usar
 EXPOSE 3000
 
-# 8) Sirve el build estático
+# 6. Inicia el servidor
 CMD ["serve", "-s", "dist", "-l", "3000"]

@@ -2,6 +2,12 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -21,7 +27,7 @@ from app.api.routes.project_history import router as project_history_router
 from app.api.routes.summary import router as summary_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.detection.routes import router as detection_router
-from app.api.routes.users import router as users_router  # ← nuevo
+from app.api.routes.users import router as users_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,15 +35,28 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 # ———————————————————————
-# Configuración CORS
+# Configuración CORS MEJORADA
 # ———————————————————————
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    
-]
+# Obtener entorno (producción o desarrollo)
+environment = os.getenv("ENVIRONMENT", "production")
+
+# Permitir cualquier origen en producción
+if environment == "production":
+    origins = ["*"]
+else:
+    # Para desarrollo permite localhost también
+    frontend_origins = os.getenv("FRONTEND_ORIGINS")
+    if frontend_origins:
+        origins = [o.strip() for o in frontend_origins.split(",") if o.strip()]
+    else:
+        origins = [
+            "https://localhost:5173",
+            "https://127.0.0.1:5173",
+            "https://localhost:3000",
+            "https://127.0.0.1:3000",
+        ]
+
+# Middleware CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -45,6 +64,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add TrustedHostMiddleware to allow specific hosts
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+
+# Add ProxyHeadersMiddleware to handle X-Forwarded-Proto
+app.add_middleware(ProxyHeadersMiddleware)
+
+
 
 # ———————————————————————
 # Inicializar BD y servir estáticos
@@ -56,7 +83,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # Routers
 # ———————————————————————
 app.include_router(api_router)
-app.include_router(users_router)            # ← ruta /users
+app.include_router(users_router)
 app.include_router(clockins_router)
 app.include_router(history_router)
 app.include_router(project_history_router)
