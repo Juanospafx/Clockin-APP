@@ -19,12 +19,12 @@ UPLOAD_DIR = "uploads/clockins"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Carga el modelo YOLOv5 (tu peso custom)
-model = torch.hub.load(
-    "ultralytics/yolov5",
-    "custom",
-    path="yolov5/epp-detector/exp8/weights/best.pt",
-    force_reload=False,
-)
+# model = torch.hub.load(
+#     "ultralytics/yolov5",
+#     "custom",
+#     path="yolov5/epp-detector/exp8/weights/best.pt",
+#     force_reload=False,
+# )
 
 def save_uploaded_image(image_bytes: bytes) -> str:
     """Guarda la imagen y devuelve la ruta relativa."""
@@ -41,8 +41,9 @@ def run_detection(self, image_bytes: bytes, user_id: str):
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
         # --- 2) Inferencia con threshold más bajo ---
-        results = model(img, conf=0.3, iou=0.45)
-        labels = results.pandas().xyxy[0].to_dict(orient="records")
+        # results = model(img, conf=0.3, iou=0.45)
+        # labels = results.pandas().xyxy[0].to_dict(orient="records")
+        labels = []
 
         # --- 3) Normaliza nombres de clase ---
         found = {

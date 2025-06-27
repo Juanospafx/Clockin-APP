@@ -57,7 +57,11 @@ const Clockin: React.FC<ClockinProps> = ({ token, onStarted }) => {
   }, [token]);
 
   // 3) Inicializar cámara
-  useEffect(() => {
+ useEffect(() => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      console.error("mediaDevices API not available");
+      return;
+    }
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(st => {
         streamRef.current = st;

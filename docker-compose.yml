@@ -1,15 +1,21 @@
-version: '3.8'
-
 services:
   db:
-    image: postgres:15
+    image: postgres:13
     restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: TuPassMuySegura123!
-      POSTGRES_DB: clockin_app
+    env_file:
+      - ./backend/.env
     volumes:
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d clockin_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    networks:
+      - clockin-net
 
   backend:
     build:
@@ -17,21 +23,34 @@ services:
       dockerfile: Dockerfile
     restart: always
     env_file:
-      - .env
+      - ./backend/.env
     ports:
-      - "8000:8000"
+      - "8000:443" # Mapea el puerto 8000 del host al 443 del contenedor
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - clockin-net
 
   frontend:
     build:
-      context: .
+      context: ./
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
     restart: always
     env_file:
-      - .env
+      - ./.env
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
     ports:
-      - "3000:3000"
+      - "443:443"
+    networks:
+      - clockin-net
 
 volumes:
   db_data:
+
+networks:
+  clockin-net:
+    driver: bridge

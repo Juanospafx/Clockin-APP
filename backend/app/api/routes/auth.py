@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
-from passlib.context import CryptContext
+
 from typing import Generator
 from datetime import datetime, timedelta
 from pydantic import BaseModel
@@ -21,7 +21,13 @@ SECRET_KEY = "f3d9a8f0b21d47d7f5c2b9c4b3d8a74387f28e64f2ce0b12991a8d390b3fbc1f"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import hashlib
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return hash_password(plain_password) == hashed_password
 
 # Nota: el tokenUrl debe coincidir con tu ruta POST /login
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -55,7 +61,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     Valida credenciales. Si correcta, genera un JWT con user_id y role.
     """
     user = db.query(User).filter(User.username == data.username).first()
-    if not user or not pwd_context.verify(data.password, user.password):
+    if not user or not verify_password(data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
