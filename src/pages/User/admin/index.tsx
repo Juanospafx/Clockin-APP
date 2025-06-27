@@ -144,13 +144,14 @@ const AdminUser: React.FC = () => {
           onFilter={handleFilter}
         />
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 space-y-6">
           <AdminTable
             users={filteredUsers}
             onEdit={openEdit}
             onDelete={handleDelete}
           />
-          <div className="mt-6 h-96">
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold mb-2">User Locations</h2>
             <UserMap />
           </div>
         </main>
