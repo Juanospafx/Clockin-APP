@@ -8,3 +8,9 @@ sqlalchemy
 psycopg2-binary
 python-dotenv
 python-dotenv>=1.0.0
+python-jose
+passlib[bcrypt]
+redis
+celery
+torch
+pydantic[email]

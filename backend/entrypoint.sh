@@ -1,20 +1,22 @@
-#!/usr/bin/env sh
-# backend/entrypoint.sh
+#!/bin/sh
 
-# Espera activo hasta que Postgres responda
-echo "⏳ Esperando a Postgres..."
-until pg_isready -h "${POSTGRES_HOST:-db}" -p "${POSTGRES_PORT:-5432}" >/dev/null 2>&1; do
+# Usar valores por defecto sin validación
+# Las variables de entorno se pasan desde docker-compose.yml
+
+echo "⏳ Esperando a Postgres ($POSTGRES_HOST:$POSTGRES_PORT)..."
+until pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" >/dev/null 2>&1; do
   sleep 1
 done
 
-# Ejecuta migraciones / crea tablas si lo necesitas:
-python3 - <<'EOF'
-from app.database import Base, engine
-from app import models
-Base.metadata.create_all(bind=engine)
-print("✅ Tablas creadas (si no existían)")
-EOF
+# Solo para diagnóstico - mostrar variables
+echo "--- Variables de entorno ---"
+echo "POSTGRES_USER=$POSTGRES_USER"
+echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD"
+echo "POSTGRES_HOST=$POSTGRES_HOST"
+echo "POSTGRES_PORT=$POSTGRES_PORT"
+echo "POSTGRES_DB=$POSTGRES_DB"
+echo "----------------------------"
 
-# Finalmente arranca Uvicorn
+# Crear tablas
 echo "🚀 Iniciando FastAPI..."
 exec "$@"
