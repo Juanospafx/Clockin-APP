@@ -9,14 +9,6 @@ interface SummaryData {
   total: number;
 }
 
-interface MeResponse {
-  id: string;
-  username: string;
-  email: string;
-  role: "admin" | "user";
-  user_type?: "field" | "office";
-}
-
 const SummaryCards: React.FC = () => {
   const [summary, setSummary] = useState<SummaryData>({
     week: 0,
@@ -31,15 +23,15 @@ const SummaryCards: React.FC = () => {
     const fetchSummary = async () => {
       if (!token || !userId) return;
       try {
-        const { data: me } = await getMe(token);
+        const me = await getMe(token);
         if (me.role === "admin") {
           setIsAdmin(true);
-          const { data } = await getSummaryAll(token);
-          setSummary(data);
+          const summaryData = await getSummaryAll(token);
+          setSummary(summaryData);
         } else {
           setIsAdmin(false);
-          const { data } = await getSummaryForUser(token, userId);
-          setSummary(data);
+          const summaryData = await getSummaryForUser(token, userId);
+          setSummary(summaryData);
         }
       } catch (err) {
         console.error("Failed to fetch summary data", err);

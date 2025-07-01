@@ -47,10 +47,13 @@ const EditUser: React.FC = () => {
       formData.append('email', user.email.trim());
       await updateMe(token, formData);
       alert('¡Datos actualizados con éxito!');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      const msg = err.response?.data?.detail || err.message;
-      alert(`Error al guardar: ${msg}`);
+      if (err instanceof Error) {
+        alert(`Error al guardar: ${err.message}`);
+      } else {
+        alert("An unknown error occurred");
+      }
     }
   };
 

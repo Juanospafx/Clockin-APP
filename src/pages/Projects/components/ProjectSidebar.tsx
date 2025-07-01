@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, Clock, Wrench, BarChart2, List as ListIcon } from "lucide-react";
+import { Home, Clock, Wrench, BarChart2 } from "lucide-react";
 
 interface ProjectSidebarProps {
   isOpen: boolean;

@@ -20,7 +20,9 @@ def get_db():
         db.close()
 
 
-def _calc_hours(db: Session, user_id: UUID | None, since: datetime) -> float:
+from typing import Union
+
+def _calc_hours(db: Session, user_id: Union[UUID, None], since: datetime) -> float:
     """
     Suma (end_time - start_time) en segundos para:
       - un usuario concreto si user_id != None (filtrando por ese user_id)

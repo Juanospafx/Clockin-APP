@@ -6,7 +6,6 @@ import {
   adminCreateUser,
   adminUpdateUser,
   adminDeleteUser,
-  adminChangePassword,
 } from "../../../lib/users";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminHeader from "./components/AdminHeader";
@@ -31,16 +30,8 @@ const AdminUser: React.FC = () => {
   const [showPwdSection, setShowPwdSection] = useState(false);
 
   const token = localStorage.getItem("token") || "";
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
 
-  useEffect(() => {
-    if (token) fetchUsers();
-  }, [token]);
-
-  async function fetchUsers() {
+  const fetchUsers = React.useCallback(async () => {
     try {
       const { data } = await adminGetUsers(token);
       setUsers(data);
@@ -48,7 +39,11 @@ const AdminUser: React.FC = () => {
     } catch (err) {
       console.error("Error fetching users", err);
     }
-  }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) fetchUsers();
+  }, [token, fetchUsers]);
 
   function handleFilter(term: string) {
     const t = term.toLowerCase();
@@ -94,7 +89,7 @@ const AdminUser: React.FC = () => {
       return alert("Usuario y email son obligatorios");
     }
 
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       username: form.username.trim(),
       email: form.email.trim(),
       role: form.role,
@@ -111,10 +106,13 @@ const AdminUser: React.FC = () => {
       }
       setShowForm(false);
       fetchUsers();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error saving user:", err);
-      const detail = err.response?.data?.detail || err.message;
-      alert(`No se pudo guardar el usuario: ${detail}`);
+      if (err instanceof Error) {
+        alert(`No se pudo guardar el usuario: ${err.message}`);
+      } else {
+        alert("An unknown error occurred");
+      }
     }
   }
 

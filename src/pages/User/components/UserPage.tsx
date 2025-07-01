@@ -1,6 +1,6 @@
 // src/pages/User/UserPage.tsx
 
-import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import {
   getMe,
   updateMe,

@@ -1,9 +1,53 @@
-import axios from 'axios';
-
-// Base de la API obtenida desde el entorno. Al desplegar la aplicación
-// se debe definir `VITE_API_URL` apuntando a la IP pública del backend.
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-});
+const api = {
+  defaults: {
+    baseURL: import.meta.env.VITE_API_URL,
+  },
+  get: (url: string, options?: RequestInit) => {
+    return fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+      ...options,
+      method: 'GET',
+    });
+  },
+  post: (url: string, body: unknown, options?: RequestInit) => {
+    return fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+      ...options,
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+  },
+  put: (url: string, body: unknown, options?: RequestInit) => {
+    return fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+      ...options,
+      method: 'PUT',
+      body: JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+  },
+  patch: (url: string, body: unknown, options?: RequestInit) => {
+    return fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+      ...options,
+      method: 'PATCH',
+      body: JSON.stringify(body),
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+    });
+  },
+  delete: (url: string, options?: RequestInit) => {
+    return fetch(`${import.meta.env.VITE_API_URL}${url}`, {
+      ...options,
+      method: 'DELETE',
+    });
+  },
+};
 
 export default api;
+

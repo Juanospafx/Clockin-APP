@@ -16,12 +16,6 @@ import TimeCartTable, { ClockinEntry } from "./components/TimeCartTable";
 import Clockin from "./components/Clockin";
 import MapContainer from "./components/MapContainer";
 
-interface UserMe {
-  id: string;
-  username: string;
-  role: "admin" | "office" | "field";
-}
-
 const COOKIE_KEY = "clockinSession";
 const COOKIE_EXPIRES_DAYS = 7;
 
@@ -86,21 +80,21 @@ const MyTime: React.FC = () => {
   }, [token]);
 
   // 2) Carga las clockins del usuario
-  const loadEntries = async () => {
+  const loadEntries = React.useCallback(async () => {
     if (!token || !userId) return;
     try {
       const { data } = await listForUser(token, userId);
       setEntries(
-        data.map((e) => ({
+        data.map((e: ClockinEntry) => ({
           id: e.id,
           psCode: e.id.slice(0, 6),
-          userName: e.user_name,
-          projectName: e.project_name || "—",
-          postalCode: e.postal_code || "—",
-          createdAt: normalizeToUTC(e.start_time),
-          endTime: e.end_time ? normalizeToUTC(e.end_time) : undefined,
-          hours: calculateHours(e.start_time, e.end_time)
-            ? parseFloat(calculateHours(e.start_time, e.end_time)!.toFixed(2))
+          userName: e.userName,
+          projectName: e.projectName || "—",
+          postalCode: e.postalCode || "—",
+          createdAt: normalizeToUTC(e.createdAt),
+          endTime: e.endTime ? normalizeToUTC(e.endTime) : undefined,
+          hours: calculateHours(e.createdAt, e.endTime)
+            ? parseFloat(calculateHours(e.createdAt, e.endTime)!.toFixed(2))
             : undefined,
           state: e.state,
           city: e.city,
@@ -113,7 +107,7 @@ const MyTime: React.FC = () => {
     } catch (err) {
       console.error("Error fetching clockins:", err);
     }
-  };
+  }, [token, userId]);
 
   // Formatea milisegundos a HH:MM:SS
   const formatTime = (ms: number) => {
@@ -125,14 +119,14 @@ const MyTime: React.FC = () => {
   };
 
   // Inicia el cronómetro
-  const startTimer = (sess: { accumulated: number; startedAt: number }) => {
+  const startTimer = React.useCallback((sess: { accumulated: number; startedAt: number }) => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = window.setInterval(() => {
       const elapsed = sess.accumulated + (Date.now() - sess.startedAt);
       setDisplayTime(formatTime(elapsed));
     }, 1000);
     setDisplayTime(formatTime(sess.accumulated + (Date.now() - sess.startedAt)));
-  };
+  }, []);
 
   // Maneja el inicio de un nuevo clockin
   const handleStarted = (p: { id: string; startTime: string }) => {
@@ -219,7 +213,7 @@ const MyTime: React.FC = () => {
   const saveEdit = async () => {
     if (!editingEntry || !token) return;
     try {
-      const payload: any = { hours: editHours };
+      const payload: Record<string, unknown> = { hours: editHours };
       payload.state = editState;
       payload.city = editCity;
       payload.street = editStreet;
@@ -289,7 +283,7 @@ const MyTime: React.FC = () => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [loadEntries, startTimer, storageKey]);
 
   // Track location every 5 minutes while session active
   useEffect(() => {

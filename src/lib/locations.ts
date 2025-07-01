@@ -7,7 +7,7 @@ export interface LocationPayload {
 }
 
 export const postLocation = (token: string, payload: LocationPayload) =>
-  api.post('/locations', payload, { headers: { Authorization: `Bearer ${token}` } });
+  api.post('/locations', payload, { headers: { Authorization: `Bearer ${token}` } }).then(res => res.json());
 
 export interface LocationWithUser extends LocationPayload {
   id: string;
@@ -17,10 +17,10 @@ export interface LocationWithUser extends LocationPayload {
 }
 
 export const getAllLocations = (token: string) =>
-  api.get<LocationWithUser[]>(
+  api.get(
     '/locations/all',
     { headers: { Authorization: `Bearer ${token}` } }
-  );
+  ).then(res => res.json());
 
 export const getLocationsByClockin = (token: string, clockinId: string) =>
-  api.get(`/locations/clockin/${clockinId}`, { headers: { Authorization: `Bearer ${token}` } });
+  api.get(`/locations/clockin/${clockinId}`, { headers: { Authorization: `Bearer ${token}` } }).then(res => res.json());

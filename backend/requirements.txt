@@ -9,8 +9,12 @@ psycopg2-binary
 python-dotenv
 python-dotenv>=1.0.0
 python-jose
-passlib[bcrypt]
+passlib==1.7.4
+bcrypt==3.2.0
 redis
 celery
 torch
 pydantic[email]
+starlette
+requests
+python-jose[cryptography]==3.3.0

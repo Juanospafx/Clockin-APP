@@ -19,9 +19,13 @@ const ClockOut: React.FC<ClockOutProps> = ({ token, clockinId, onCompleted }) =>
       await endClockin(token, clockinId, {});
       localStorage.removeItem("clockinSession");
       onCompleted();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      alert(err.response?.data?.detail || "Error finalizando clockin");
+      if (err instanceof Error) {
+        alert(err.message || "Error finalizando clockin");
+      } else {
+        alert("An unknown error occurred");
+      }
     } finally {
       setIsProcessing(false);
     }

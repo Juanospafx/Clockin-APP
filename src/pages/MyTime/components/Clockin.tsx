@@ -8,10 +8,6 @@ import { useJsApiLoader } from "@react-google-maps/api";
 import MapContainer from "./MapContainer";
 
 interface Project { id: string; name: string; }
-interface ClockinOut {
-  id: string;
-  start_time: string;
-}
 interface ClockinProps {
   token: string;
   onStarted: (payload: { id: string; startTime: string }) => void;
@@ -116,10 +112,14 @@ const Clockin: React.FC<ClockinProps> = ({ token, onStarted }) => {
         streamRef.current?.getTracks().forEach(t => t.stop());
         onStarted({ id: clk.id, startTime: clk.start_time });
         setStatus("idle");
-      } catch (err: any) {
+      } catch (err: unknown) {
         setStatus("failed");
         console.error(err);
-        alert(err.response?.data?.detail || "Error iniciando clockin");
+        if (err instanceof Error) {
+          alert(err.message || "Error iniciando clockin");
+        } else {
+          alert("An unknown error occurred");
+        }
       }
     }, "image/jpeg");
   };

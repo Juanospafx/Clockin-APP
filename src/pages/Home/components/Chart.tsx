@@ -35,12 +35,17 @@ const Chart: React.FC = () => {
       }
 
       try {
-        const res = await chartData(userId); // suponiendo que chartData devuelve { data: [{month, hours}, ...] }
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.warn("No token en localStorage");
+          return;
+        }
+        const res = await chartData(token, userId);
 
         const chartArray = months.map((m) => ({ month: m, hours: 0 }));
 
-        if (Array.isArray(res?.data)) {
-          res.data.forEach(({ month, hours }) => {
+        if (Array.isArray(res)) {
+          res.forEach(({ month, hours }) => {
             if (month >= 1 && month <= 12) {
               chartArray[month - 1].hours = Number(hours.toFixed(2));
             }

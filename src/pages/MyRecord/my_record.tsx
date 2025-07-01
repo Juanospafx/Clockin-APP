@@ -1,4 +1,4 @@
-// src/pages/User/admin/MyRecord.tsx
+// src/pages/MyRecord/my_record.tsx
 import React, { useEffect, useState, ChangeEvent } from "react";
 import api from "../../lib/api";
 import { getMe } from "../../lib/users";
@@ -11,8 +11,15 @@ import MyRecordTable, { RecordEntry } from "./components/my_record_table";
 import MapContainer from "./components/MapContainer";
 import ClockinMap from "./components/ClockinMap";
 import { getLocationsByClockin } from "../../lib/locations";
+import { modifyClockin } from "../../lib/clockins";
 
 const API_BASE = api.defaults.baseURL || "";
+
+interface MapPoint {
+  lat: number;
+  lng: number;
+  timestamp: string;
+}
 
 const MyRecord: React.FC = () => {
   const [records, setRecords] = useState<RecordEntry[]>([]);
@@ -21,7 +28,7 @@ const MyRecord: React.FC = () => {
   const [editing, setEditing] = useState<RecordEntry | null>(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [previewPath, setPreviewPath] = useState<string | null>(null);
-  const [mapPoints, setMapPoints] = useState<any[] | null>(null);
+  const [mapPoints, setMapPoints] = useState<MapPoint[] | null>(null);
 
   // Edit form state
   const [hours, setHours] = useState<number>(0);
@@ -34,7 +41,6 @@ const MyRecord: React.FC = () => {
 
   const token = localStorage.getItem("token")!;
   const userId = localStorage.getItem("user_id")!;
-  const headers = { Authorization: `Bearer ${token}` };
 
   // Load records and role
   useEffect(() => {

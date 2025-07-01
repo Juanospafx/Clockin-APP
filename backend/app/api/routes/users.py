@@ -21,7 +21,7 @@ from passlib.context import CryptContext
 
 from app.database import get_db
 from app.models import User as UserModel
-from app.api.routes.auth import get_current_user
+from app.api.routes.auth import get_current_user, get_current_user_optional
 
 # — password hashing setup —
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -52,7 +52,79 @@ class PasswordChange(BaseModel):
     new_password: str
 
 
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+    role: str
+
+
+@router.post("/initial-admin-setup", response_model=UserOut, status_code=status.HTTP_201_CREATED, tags=["admin"])
+async def initial_admin_setup(
+    user: UserCreate,
+    db: Session = Depends(get_db),
+):
+    user_count = db.query(UserModel).count()
+    if user_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Initial admin setup can only be performed when no users exist."
+        )
+
+    db_user = db.query(UserModel).filter(UserModel.username == user.username).first()
+    if db_user:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Username already registered")
+
+    hashed_password = pwd_context.hash(user.password)
+    db_user = UserModel(
+        username=user.username,
+        email=user.email,
+        password=hashed_password,
+        role=user.role,
+        created_at=datetime.utcnow()
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
 # — endpoints —
+
+
+@router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    user: UserCreate,
+    db: Session = Depends(get_db),
+    current_user: Optional[UserModel] = Depends(get_current_user_optional), # Allow unauthenticated for first user
+):
+    # Allow creation of the first user without authentication
+    user_count = db.query(UserModel).count()
+    print(f"User count: {user_count}")
+    if user_count == 0:
+        pass  # No authentication needed for the very first user
+    elif not current_user or current_user.role.value != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can create users"
+        )
+
+    db_user = db.query(UserModel).filter(UserModel.username == user.username).first()
+    if db_user:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Username already registered")
+
+    hashed_password = pwd_context.hash(user.password)
+    db_user = UserModel(
+        username=user.username,
+        email=user.email,
+        password=hashed_password,
+        role=user.role,
+        created_at=datetime.utcnow()
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
 
 
 @router.get("/me", response_model=UserOut)

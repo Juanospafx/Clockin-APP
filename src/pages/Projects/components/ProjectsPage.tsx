@@ -14,29 +14,6 @@ import ProjectHeader from "../components/ProjectHeader";
 import ProjectTable, { Project } from "../components/ProjectTable";
 import MapContainer from "../components/MapContainer";
 
-interface ProjectFromApi {
-  id: string;
-  name: string;
-  description?: string;
-  state?: string;
-  city?: string;
-  street?: string;
-  street_number?: string;
-  postal_code?: string;
-  location_lat?: number;
-  location_long?: number;
-  status: "start" | "in_progress" | "finished";
-  start_date: string;
-  end_date?: string;
-  created_at: string;
-}
-
-interface UserMe {
-  id: string;
-  username: string;
-  role: "admin" | "office" | "field";
-}
-
 interface Props {
   onToggleSidebar: () => void;
 }
@@ -137,7 +114,7 @@ const ProjectsPage: React.FC<Props> = ({ onToggleSidebar }) => {
       street: "",
       street_number: "",
       postal_code: p.postalCode === "—" ? "" : p.postalCode,
-      status: p.status as any,
+      status: p.status,
       start_date: dayjs(p.startDate, "DD/MM/YYYY").format("YYYY-MM-DD"),
       end_date:
         p.endDate && p.endDate !== "—"
@@ -152,7 +129,7 @@ const ProjectsPage: React.FC<Props> = ({ onToggleSidebar }) => {
     if (!token) return;
     await deleteProject(token!, id);
     const { data } = await fetchProjects(token!);
-    const mapped = data.map((p) => ({
+    const mapped = data.map((p: Project) => ({
       id: p.id,
       projectName: p.name,
       postalCode: p.postal_code || "—",
@@ -169,7 +146,7 @@ const ProjectsPage: React.FC<Props> = ({ onToggleSidebar }) => {
     e.preventDefault();
     if (!token) return;
 
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       name: form.name,
       description: form.description,
       state: form.state,
@@ -196,7 +173,7 @@ const ProjectsPage: React.FC<Props> = ({ onToggleSidebar }) => {
 
     // recargar lista
     const { data: data2 } = await fetchProjects(token!);
-    const mapped2 = data2.map((p) => ({
+    const mapped2 = data2.map((p: Project) => ({
       id: p.id,
       projectName: p.name,
       postalCode: p.postal_code || "—",

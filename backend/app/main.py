@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
+
 import os
 from dotenv import load_dotenv
 
@@ -42,7 +42,9 @@ environment = os.getenv("ENVIRONMENT", "production")
 
 # Permitir cualquier origen en producción
 if environment == "production":
-    origins = ["*"]
+    origins = [
+        "https://clockinapp.lat",
+    ]
 else:
     # Para desarrollo permite localhost también
     frontend_origins = os.getenv("FRONTEND_ORIGINS")
@@ -69,7 +71,7 @@ app.add_middleware(
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
 # Add ProxyHeadersMiddleware to handle X-Forwarded-Proto
-app.add_middleware(ProxyHeadersMiddleware)
+
 
 
 
@@ -82,14 +84,18 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 # ———————————————————————
 # Routers
 # ———————————————————————
-app.include_router(api_router)
-app.include_router(users_router)
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok"}
+
+app.include_router(api_router, prefix="/api")
 app.include_router(clockins_router)
 app.include_router(history_router)
 app.include_router(project_history_router)
 app.include_router(summary_router)
 app.include_router(projects_router)
 app.include_router(detection_router)
+
 
 # ———————————————————————
 # Scheduler para promover proyectos

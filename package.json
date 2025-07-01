@@ -12,7 +12,6 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@react-google-maps/api": "^2.20.6",
-    "axios": "^1.8.4",
     "cookie": "^1.0.2",
     "dayjs": "^1.11.13",
     "file-saver": "^2.0.5",
@@ -31,6 +30,7 @@
     "recharts": "^2.15.3",
     "url-change-event": "^0.1.7",
     "useref": "^1.4.4",
+    "uvicorn": "^0.0.1-security",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

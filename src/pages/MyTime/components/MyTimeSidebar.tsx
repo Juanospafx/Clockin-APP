@@ -1,7 +1,7 @@
 // src/pages/MyTime/components/MyTimeSidebar.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, Clock, BarChart2, List as ListIcon } from "lucide-react";
+import { Clock, BarChart2 } from "lucide-react";
 
 interface MyTimeSidebarProps {
   isOpen: boolean;

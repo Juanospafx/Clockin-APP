@@ -18,12 +18,12 @@ const Login = () => {
       const res = await api.post('/login', form, {
         headers: { 'Content-Type': 'application/json' },
       });
-      const { access_token, role, user_id } = res.data;
+      const { access_token, role, user_id } = await res.json();
       localStorage.setItem('token', access_token);
       localStorage.setItem('role', role);
       localStorage.setItem('user_id', user_id);
       navigate('/');
-    } catch (err) {
+    } catch {
       setError('Invalid credentials');
     }
   };

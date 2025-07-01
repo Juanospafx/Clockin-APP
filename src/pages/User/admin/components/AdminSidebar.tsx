@@ -2,7 +2,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../../../login/logout";
-import { Home, Clock, Wrench } from "lucide-react";
+import { Clock, Wrench } from "lucide-react";
 
 interface AdminSidebarProps {
   isOpen: boolean;

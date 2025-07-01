@@ -21,7 +21,7 @@ const Dashboard: React.FC = () => {
       navigate("/login");
     } else {
       getMe(token)
-        .then(({ data }) => setIsAdmin(data.role === "admin"))
+        .then((user) => setIsAdmin(user.role === "admin"))
         .catch(() => setIsAdmin(false));
     }
   }, [navigate]);
